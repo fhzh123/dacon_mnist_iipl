@@ -38,3 +38,5 @@ class CustomDataset(Dataset):
 
     def __len__(self):
         return self.num_data
+
+## 미완

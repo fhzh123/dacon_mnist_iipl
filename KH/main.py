@@ -20,3 +20,5 @@ trans = transforms.Compose([
 ])
 trainset = torchvision.datasets.ImageFolder(root='../data/train/', transform=trans)
 trainloader = DataLoader(trainset, batch_size)
+
+## 미완
