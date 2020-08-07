@@ -27,14 +27,14 @@ def main(args):
     # Data transformation & augmentation
     data_transforms = {
         'train': transforms.Compose([
-            transforms.Resize((args.resize_pixel, args.resize_pixel, 3)),
+            transforms.Resize((args.resize_pixel, args.resize_pixel)),
             transforms.RandomAffine(30),
             transforms.ColorJitter(brightness=(0.5, 2)),
             transforms.ToTensor(),
             transforms.Normalize([0.5], [0.5])
         ]),
         'test': transforms.Compose([
-            transforms.Resize((args.resize_pixel, args.resize_pixel, 3)),
+            transforms.Resize((args.resize_pixel, args.resize_pixel)),
             transforms.ToTensor(),
             transforms.Normalize([0.5], [0.5])
         ])
@@ -59,7 +59,7 @@ def main(args):
     dataloaders = {
         'train': DataLoader(image_datasets['train'], batch_size=args.batch_size,
                             shuffle=True, num_workers=args.num_workers),
-        'valid': DataLoader(image_datasets['train'], batch_size=args.batch_size,
+        'valid': DataLoader(image_datasets['valid'], batch_size=args.batch_size,
                             shuffle=True, num_workers=args.num_workers),
         'test': DataLoader(image_datasets['test'], batch_size=args.batch_size,
                             shuffle=False, num_workers=1)
@@ -81,8 +81,9 @@ def main(args):
 
     # Train
     for epoch in range(args.num_epochs):
+        start_time = time.time()
         print('Epoch {}/{}'.format(epoch + 1, args.num_epochs))
-        print('-' * 100)
+        print('-' * 50)
 
         for phase in ['train', 'valid']:
             if phase == 'train':
@@ -94,7 +95,7 @@ def main(args):
             running_corrects = 0
 
             # Iterate over data
-            for inputs, letters, labels in tqdm(dataloaders[phase]):
+            for inputs, letters, labels in dataloaders[phase]:
                 inputs = inputs.to(device)
                 labels = torch.tensor([int(x) for x in labels]).to(device)
 
@@ -126,10 +127,6 @@ def main(args):
                 
             spend_time = (time.time() - start_time) / 60
             print('{} Loss: {:.4f} Acc: {:.4f} Time: {:.4f}min'.format(phase, epoch_loss, epoch_acc, spend_time))
-            if phase == 'train':
-                train_error_list.append((epoch_loss, epoch_acc.item()))
-            if phase == 'val':
-                val_error_list.append((epoch_loss, epoch_acc.item()))
 
 
 
