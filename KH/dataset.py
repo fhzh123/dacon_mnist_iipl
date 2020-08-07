@@ -1,42 +1,41 @@
 import os
-import time
-import copy
-import pickle
 import numpy as np
 import pandas as pd
+from glob import glob
 from PIL import Image
-from tqdm import tqdm
 
 import torch
-import torchvision
-import torch.optim as optim
 from torchvision import transforms
 from torch.utils.data import Dataset
 
 class CustomDataset(Dataset):
-    def __init__(self, image_path, data_path, transform=None, resize_pixel=32):
-        self.image_path = image_path
-        self.data_path = data_path
+    def __init__(self, img_path, isTrain=True, transform=None):
+        self.img_path = img_path
+        self.isTrain = isTrain
 
-        data = pd.read_csv(data_path)
-        self.label = list(data['label'])
-        self.file = list(data['file'])
+        if isTrain:
+            self.label = [img.split('train/')[1][0] for img in self.img_path]
+        else:
+            self.id = [int(img.split('test/')[1].split('_')[0]) for img in self.img_path]
+        self.letter = [img[-5] for img in self.img_path]
 
-        self.num_data = len(data)
+        self.num_data = len(self.img_path)
         self.transform = transform
-        self.resize_pixel = resize_pixel
 
     def __getitem__(self, index):
-        label = self.label[index]
-        file = self.file[index]
-        image_path = os.path.join(self.image_path, label)
-        image = Image.open(os.path.join(image_path, file))
-        image = image.resize((self.resize_pixel, self.resize_pixel), resample = Image.BILINEAR)
+        letter = self.letter[index]
+        image = Image.open(self.img_path[index])
+        image = image.convert('RGB')
+        # Image Augmentation
         if self.transform is not None:
             image = self.transform(image)
-        return image, label
+        # Return Value
+        if self.isTrain:
+            label = self.label[index]
+            return image, letter, label
+        else:
+            id_ = self.id[index]
+            return image, letter, id_
 
     def __len__(self):
         return self.num_data
-
-## 미완
