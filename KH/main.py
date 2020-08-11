@@ -27,14 +27,12 @@ def main(args):
     # Data transformation & augmentation
     data_transforms = {
         'train': transforms.Compose([
-            transforms.Resize((args.resize_pixel, args.resize_pixel, 3)),
-            transforms.RandomAffine(30),
-            transforms.ColorJitter(brightness=(0.5, 2)),
+            transforms.Resize((args.resize_pixel, args.resize_pixel)),
             transforms.ToTensor(),
             transforms.Normalize([0.5], [0.5])
         ]),
         'test': transforms.Compose([
-            transforms.Resize((args.resize_pixel, args.resize_pixel, 3)),
+            transforms.Resize((args.resize_pixel, args.resize_pixel)),
             transforms.ToTensor(),
             transforms.Normalize([0.5], [0.5])
         ])
@@ -59,7 +57,7 @@ def main(args):
     dataloaders = {
         'train': DataLoader(image_datasets['train'], batch_size=args.batch_size,
                             shuffle=True, num_workers=args.num_workers),
-        'valid': DataLoader(image_datasets['train'], batch_size=args.batch_size,
+        'valid': DataLoader(image_datasets['valid'], batch_size=args.batch_size,
                             shuffle=True, num_workers=args.num_workers),
         'test': DataLoader(image_datasets['test'], batch_size=args.batch_size,
                             shuffle=False, num_workers=1)
@@ -86,7 +84,6 @@ def main(args):
 
         for phase in ['train', 'valid']:
             if phase == 'train':
-                lr_step_scheduler.step()
                 model.train()
             else:
                 model.eval()
@@ -126,11 +123,8 @@ def main(args):
                 
             spend_time = (time.time() - start_time) / 60
             print('{} Loss: {:.4f} Acc: {:.4f} Time: {:.4f}min'.format(phase, epoch_loss, epoch_acc, spend_time))
-            if phase == 'train':
-                train_error_list.append((epoch_loss, epoch_acc.item()))
-            if phase == 'val':
-                val_error_list.append((epoch_loss, epoch_acc.item()))
-
+        # Learning rate scheduler
+        lr_step_scheduler.step()
 
 
 if __name__=='__main__':
