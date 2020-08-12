@@ -28,13 +28,17 @@ def main(args):
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize((args.resize_pixel, args.resize_pixel)),
+            transforms.RandomAffine(args.random_affine),
+            transforms.ColorJitter(brightness=(0.5, 2)),
+            transforms.RandomResizedCrop((args.resize_pixel, args.resize_pixel), 
+                                         scale=(0.85, 1))
             transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5])
+            transforms.Normalize(mean=(0.1307,), std=(0.3081,))
         ]),
         'test': transforms.Compose([
             transforms.Resize((args.resize_pixel, args.resize_pixel)),
             transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5])
+            transforms.Normalize(mean=(0.1307,), std=(0.3081,))
         ])
     }
 
@@ -69,13 +73,12 @@ def main(args):
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), 
                                 lr=args.lr)
     lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
-                                            step_size=20, gamma=0.1) # Decay LR by a factor of 0.1 every step_size
-    model.to(device)
+                                            step_size=args.lr_step_size, gamma=0.1)
 
     ## Training
     # Initialize
     best_model_wts = copy.deepcopy(model.state_dict())
-    best_acc = 0.0
+    best_loss = 9999999999
 
     # Train
     for epoch in range(args.num_epochs):
@@ -117,8 +120,8 @@ def main(args):
             epoch_loss = running_loss / len(image_datasets[phase])
             epoch_acc = running_corrects.double() / len(image_datasets[phase])
 
-            if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_acc
+            if phase == 'val' and epoch_loss < best_loss:
+                best_loss = epoch_loss
                 best_model_wts = copy.deepcopy(model.state_dict())
                 
             spend_time = (time.time() - start_time) / 60
@@ -126,18 +129,38 @@ def main(args):
         # Learning rate scheduler
         lr_step_scheduler.step()
 
+    # Model Saving
+    model.load_state_dict(best_model_wts)
+    if os.path.exists(args.save_path):
+        os.mkdir(args.save_path)
+    save_path_ = os.path.join(args.save_path, str(datetime.datetime.now())[:-4])
+    os.mkdir(save_path_)
+    with open(os.path.join(save_path_, 'hyperparameter.json'), 'w') as f:
+        json.dump({
+            'num_epochs': args.num_epochs,
+            'resize_pixel': args.resize_pixel,
+            'random_affine': args.random_affine,
+            ''
+        })
+    torch.save(model.state_dict(), os.path.join(save_path_, 'model.pt'))
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Order_net argparser')
-    parser.add_argument('--data_path', type=str, default='../data', help='Data Path Setting')
-    parser.add_argument('--num_epochs', type=int, default=10, help='The Number of Epoch')
+    # Path Setting
+    parser.add_argument('--data_path', type=str, default='./data', help='Data path setting')
+    parser.add_argument('--save_path', type=str, default='./KH/save')
+    parser.add_argument('--num_epochs', type=int, default=10, help='The number of epoch')
+    # Augmentation Setting
     parser.add_argument('--resize_pixel', type=int, default=64, help='Resize pixel')
-    parser.add_argument('--batch_size', type=int, default=32, help='Batch Size')
-    parser.add_argument('--lr', type=float, default=1e-4, help='Learning Rate Setting')
+    parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')
 
-    parser.add_argument('--valid_ratio', type=float, default=0.05, help='Train / Valid Split Ratio')
-    parser.add_argument('--random_seed', type=int, default=42, help='Random State Setting')
-    parser.add_argument('--num_workers', type=int, default=8, help='CPU Worker Setting')
+    parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
+    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate setting')
+    parser.add_argument('--lr_step_size', type=int, default=30, help=)
+
+    parser.add_argument('--valid_ratio', type=float, default=0.05, help='Train / Valid split ratio')
+    parser.add_argument('--random_seed', type=int, default=42, help='Random state setting')
+    parser.add_argument('--num_workers', type=int, default=8, help='CPU worker setting')
     args = parser.parse_args()
 
     main(args)
