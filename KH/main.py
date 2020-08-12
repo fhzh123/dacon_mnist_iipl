@@ -1,3 +1,4 @@
+# Import Modules
 import os
 import copy
 import json
@@ -11,6 +12,7 @@ from PIL import Image
 from glob import glob
 from tqdm import tqdm
 
+# Import PyTorch
 import torch
 import torchvision
 import torch.nn as nn
@@ -22,7 +24,7 @@ from torch.utils.data import Dataset, DataLoader
 
 # Import Custom Module
 from dataset import CustomDataset
-from utils import terminal_size
+from utils import terminal_size, train_valid_split
 
 def main(args):
     # Device setting
@@ -39,36 +41,28 @@ def main(args):
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.1307,), std=(0.3081,))
         ]),
-        'test': transforms.Compose([
+        'valid': transforms.Compose([
             transforms.Resize((args.resize_pixel, args.resize_pixel)),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.1307,), std=(0.3081,))
         ])
     }
 
-    ## Train, valid data split
-    # Image load
-    np.random.seed(args.random_seed)
-    total_train_img_list = glob(os.path.join(args.data_path, 'train/*/*.jpg'))
-    test_img_list = glob(os.path.join(args.data_path, 'test/*.jpg'))
-    # Data split
-    valid_size = int(len(total_train_img_list)*args.valid_ratio)
-    valid_img_list = list(np.random.choice(total_train_img_list, size=valid_size))
-    train_img_list = list(set(total_train_img_list) - set(valid_img_list))
+    # Train, valid data split
+    train_img_list, valid_img_list = train_valid_split(random_seed=args.random_seed, 
+                                                       data_path=args.data_path,
+                                                       valid_ratio=args.valid_ratio)
 
     # Custom dataset & dataloader setting
     image_datasets = {
         'train': CustomDataset(train_img_list, isTrain=True, transform=data_transforms['train']),
-        'valid': CustomDataset(valid_img_list, isTrain=True, transform=data_transforms['test']),
-        'test': CustomDataset(test_img_list, isTrain=False, transform=data_transforms['test'])
+        'valid': CustomDataset(valid_img_list, isTrain=True, transform=data_transforms['valid'])
     }
     dataloaders = {
         'train': DataLoader(image_datasets['train'], batch_size=args.batch_size,
                             shuffle=True, num_workers=args.num_workers),
         'valid': DataLoader(image_datasets['valid'], batch_size=args.batch_size,
                             shuffle=True, num_workers=args.num_workers),
-        'test': DataLoader(image_datasets['test'], batch_size=args.batch_size,
-                            shuffle=False, num_workers=1)
     }
 
     # Model Setting
@@ -127,7 +121,8 @@ def main(args):
             epoch_loss = running_loss / len(image_datasets[phase])
             epoch_acc = running_corrects.double() / len(image_datasets[phase])
 
-            if phase == 'val' and epoch_loss < best_loss:
+            if phase == 'valid' and epoch_loss < best_loss:
+                best_epoch = epoch
                 best_loss = epoch_loss
                 best_model_wts = copy.deepcopy(model.state_dict())
                 
@@ -158,7 +153,7 @@ if __name__=='__main__':
     # Path Setting
     parser.add_argument('--data_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--save_path', type=str, default='./KH/save')
-    # Augmentation Setting
+    # Image Setting
     parser.add_argument('--resize_pixel', type=int, default=64, help='Resize pixel')
     parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')
     # Training Setting
