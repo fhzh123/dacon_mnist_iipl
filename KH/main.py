@@ -1,8 +1,10 @@
 import os
-import time
 import copy
+import json
+import time
 import pickle
 import argparse
+import datetime
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -13,12 +15,14 @@ import torch
 import torchvision
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.utils as torch_utils
 from torch.optim import lr_scheduler
 from torchvision import transforms, models
 from torch.utils.data import Dataset, DataLoader
 
 # Import Custom Module
 from dataset import CustomDataset
+from utils import terminal_size
 
 def main(args):
     # Device setting
@@ -31,7 +35,7 @@ def main(args):
             transforms.RandomAffine(args.random_affine),
             transforms.ColorJitter(brightness=(0.5, 2)),
             transforms.RandomResizedCrop((args.resize_pixel, args.resize_pixel), 
-                                         scale=(0.85, 1))
+                                         scale=(0.85, 1)),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.1307,), std=(0.3081,))
         ]),
@@ -68,12 +72,12 @@ def main(args):
     }
 
     # Model Setting
-    model = models.mobilenet_v2(pretrained=False, num_classes=10)
+    model = models.wide_resnet50_2(pretrained=False, num_classes=10)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), 
-                                lr=args.lr)
+    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
                                             step_size=args.lr_step_size, gamma=0.1)
+    model.to(device)
 
     ## Training
     # Initialize
@@ -82,8 +86,8 @@ def main(args):
 
     # Train
     for epoch in range(args.num_epochs):
+        print('#'*terminal_size())
         print('Epoch {}/{}'.format(epoch + 1, args.num_epochs))
-        print('-' * 100)
 
         for phase in ['train', 'valid']:
             if phase == 'train':
@@ -92,9 +96,10 @@ def main(args):
                 model.eval()
             running_loss = 0.0
             running_corrects = 0
+            start_time = time.time()
 
             # Iterate over data
-            for inputs, letters, labels in tqdm(dataloaders[phase]):
+            for inputs, letters, labels in dataloaders[phase]:
                 inputs = inputs.to(device)
                 labels = torch.tensor([int(x) for x in labels]).to(device)
 
@@ -110,6 +115,8 @@ def main(args):
                     # Backward + optimize only if in training phase
                     if phase == 'train':
                         loss.backward()
+                        torch_utils.clip_grad_norm_(model.parameters(), 
+                                                    args.max_grad_norm)
                         optimizer.step() 
 
                 # Statistics
@@ -125,23 +132,25 @@ def main(args):
                 best_model_wts = copy.deepcopy(model.state_dict())
                 
             spend_time = (time.time() - start_time) / 60
-            print('{} Loss: {:.4f} Acc: {:.4f} Time: {:.4f}min'.format(phase, epoch_loss, epoch_acc, spend_time))
+            print('{} Loss: {:.4f} Acc: {:.4f} Time: {:.3f}min'.format(phase, epoch_loss, epoch_acc, spend_time))
         # Learning rate scheduler
         lr_step_scheduler.step()
 
     # Model Saving
     model.load_state_dict(best_model_wts)
-    if os.path.exists(args.save_path):
+    if not os.path.exists(args.save_path):
         os.mkdir(args.save_path)
-    save_path_ = os.path.join(args.save_path, str(datetime.datetime.now())[:-4])
+    save_path_ = os.path.join(args.save_path, str(datetime.datetime.now())[:-4].replace(' ', '_'))
     os.mkdir(save_path_)
+    print('Best validation loss: {:.4f}'.format(best_loss))
     with open(os.path.join(save_path_, 'hyperparameter.json'), 'w') as f:
         json.dump({
             'num_epochs': args.num_epochs,
             'resize_pixel': args.resize_pixel,
             'random_affine': args.random_affine,
-            ''
-        })
+            'lr': args.lr,
+            'best_loss': best_loss
+        }, f)
     torch.save(model.state_dict(), os.path.join(save_path_, 'model.pt'))
 
 if __name__=='__main__':
@@ -149,19 +158,20 @@ if __name__=='__main__':
     # Path Setting
     parser.add_argument('--data_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--save_path', type=str, default='./KH/save')
-    parser.add_argument('--num_epochs', type=int, default=10, help='The number of epoch')
     # Augmentation Setting
     parser.add_argument('--resize_pixel', type=int, default=64, help='Resize pixel')
     parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')
-
-    parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
-    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate setting')
-    parser.add_argument('--lr_step_size', type=int, default=30, help=)
-
+    # Training Setting
+    parser.add_argument('--num_epochs', type=int, default=300, help='The number of epoch')
+    parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
+    parser.add_argument('--lr', type=float, default=1e-2, help='Learning rate setting')
+    parser.add_argument('--lr_step_size', type=int, default=30, help='Learning rate scheduling step')
+    parser.add_argument('--max_grad_norm', type=int, default=5, help='Gradient clipping max norm')
     parser.add_argument('--valid_ratio', type=float, default=0.05, help='Train / Valid split ratio')
     parser.add_argument('--random_seed', type=int, default=42, help='Random state setting')
     parser.add_argument('--num_workers', type=int, default=8, help='CPU worker setting')
     args = parser.parse_args()
 
+    total_start_time = time.time()
     main(args)
-    print('Done!')
+    print('Done! {:.4f}min spend!'.format((time.time() - total_start_time)/60))
