@@ -11,6 +11,7 @@ import pandas as pd
 from PIL import Image
 from glob import glob
 from tqdm import tqdm
+from efficientnet_pytorch import EfficientNet
 
 # Import PyTorch
 import torch
@@ -23,6 +24,7 @@ from torchvision import transforms, models
 from torch.utils.data import Dataset, DataLoader
 
 # Import Custom Module
+from model import conv_model
 from dataset import CustomDataset
 from utils import terminal_size, train_valid_split
 
@@ -55,8 +57,10 @@ def main(args):
 
     # Custom dataset & dataloader setting
     image_datasets = {
-        'train': CustomDataset(train_img_list, isTrain=True, transform=data_transforms['train']),
-        'valid': CustomDataset(valid_img_list, isTrain=True, transform=data_transforms['valid'])
+        'train': CustomDataset(train_img_list, isTrain=True, 
+                               transform=data_transforms['train']),
+        'valid': CustomDataset(valid_img_list, isTrain=True, 
+                               transform=data_transforms['valid'])
     }
     dataloaders = {
         'train': DataLoader(image_datasets['train'], batch_size=args.batch_size,
@@ -66,7 +70,10 @@ def main(args):
     }
 
     # Model Setting
-    model = models.wide_resnet50_2(pretrained=False, num_classes=10)
+    # model = models.mobilenet_v2(pretrained=False, num_classes=10)
+    # model = conv_model()
+    model = EfficientNet.from_pretrained('efficientnet-b7', num_classes=10)
+    # model._fc = nn.Linear(1536, 10)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
@@ -144,6 +151,7 @@ def main(args):
             'resize_pixel': args.resize_pixel,
             'random_affine': args.random_affine,
             'lr': args.lr,
+            'random_seed': args.random_seed,
             'best_loss': best_loss
         }, f)
     torch.save(model.state_dict(), os.path.join(save_path_, 'model.pt'))
@@ -154,15 +162,15 @@ if __name__=='__main__':
     parser.add_argument('--data_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--save_path', type=str, default='./KH/save')
     # Image Setting
-    parser.add_argument('--resize_pixel', type=int, default=64, help='Resize pixel')
+    parser.add_argument('--resize_pixel', type=int, default=360, help='Resize pixel')
     parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')
     # Training Setting
     parser.add_argument('--num_epochs', type=int, default=300, help='The number of epoch')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--lr', type=float, default=1e-2, help='Learning rate setting')
-    parser.add_argument('--lr_step_size', type=int, default=30, help='Learning rate scheduling step')
+    parser.add_argument('--lr_step_size', type=int, default=60, help='Learning rate scheduling step')
     parser.add_argument('--max_grad_norm', type=int, default=5, help='Gradient clipping max norm')
-    parser.add_argument('--valid_ratio', type=float, default=0.05, help='Train / Valid split ratio')
+    parser.add_argument('--valid_ratio', type=float, default=0.1, help='Train / Valid split ratio')
     parser.add_argument('--random_seed', type=int, default=42, help='Random state setting')
     parser.add_argument('--num_workers', type=int, default=8, help='CPU worker setting')
     args = parser.parse_args()

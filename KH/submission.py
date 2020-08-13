@@ -1,6 +1,7 @@
 # Import Modules
 import os
 import json
+import time
 import argparse
 import numpy as np
 import pandas as pd
@@ -21,13 +22,13 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Information Load
-    with open(os.path.join(args.model_path, 'model.pt'), 'r') as f:
+    with open(os.path.join(args.model_path, 'hyperparameter.json'), 'r') as f:
         info_ = json.load(f)
     resize_pixel = info_['resize_pixel']
 
     # Model Load & Setting
     model = models.wide_resnet50_2(pretrained=False, num_classes=10)
-    model.load_state_dict(torch.load(args.model_path, 'model_pt'))
+    model.load_state_dict(torch.load(os.path.join(args.model_path, 'model.pt')))
     model.eval()
     model.to(device)
 
@@ -51,7 +52,7 @@ def main(args):
             outputs = model(inputs)
             _, preds = torch.max(outputs, 1)
             id_list.extend(id_.tolist())
-            pred_list.extend(preds.data.cpu.tolist())
+            pred_list.extend(preds.tolist())
 
     # Submission CSV Setting
     submission = pd.DataFrame({
@@ -64,9 +65,11 @@ def main(args):
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Order_net argparser')
     # Path Setting
+    parser.add_argument('--data_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--model_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--submission_save_path', type=str, default='./KH/save')
     # Image Setting
+    parser.add_argument('--batch_size', type=int, default=32, help='Test batch size')
     args = parser.parse_args()
 
     total_start_time = time.time()
