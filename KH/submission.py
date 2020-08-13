@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from glob import glob
 from tqdm import tqdm
+from efficientnet_pytorch import EfficientNet
 
 # Import PyTorch
 import torch
@@ -27,7 +28,8 @@ def main(args):
     resize_pixel = info_['resize_pixel']
 
     # Model Load & Setting
-    model = models.wide_resnet50_2(pretrained=False, num_classes=10)
+    # model = models.wide_resnet50_2(pretrained=False, num_classes=10)
+    model = EfficientNet.from_pretrained('efficientnet-b3', num_classes=10)
     model.load_state_dict(torch.load(os.path.join(args.model_path, 'model.pt')))
     model.eval()
     model.to(device)

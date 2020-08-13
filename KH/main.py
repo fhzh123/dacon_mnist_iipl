@@ -24,8 +24,9 @@ from torchvision import transforms, models
 from torch.utils.data import Dataset, DataLoader
 
 # Import Custom Module
-from model import conv_model
+from model import ensemble_model
 from dataset import CustomDataset
+from optimizer import WarmupLinearSchedule, Ralamb
 from utils import terminal_size, train_valid_split
 
 def main(args):
@@ -72,23 +73,35 @@ def main(args):
     # Model Setting
     # model = models.mobilenet_v2(pretrained=False, num_classes=10)
     # model = conv_model()
-    model = EfficientNet.from_pretrained('efficientnet-b7', num_classes=10)
+    if not args.efficientnet_not_use:
+        model = EfficientNet.from_pretrained(f'efficientnet-b{args.efficientnet_model_number}', num_classes=10)
+    else:
+        model = models.resnext50_32x4d(pretrained=False, num_classes=10)
     # model._fc = nn.Linear(1536, 10)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
-    lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
-                                            step_size=args.lr_step_size, gamma=0.1)
+    # optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
+    optimizer = Ralamb(params=filter(lambda p: p.requires_grad, model.parameters()),
+                lr=args.lr, weight_decay=args.weight_decay)
+    # lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
+    #                                         step_size=args.lr_step_size, gamma=0.1)
+    scheduler = WarmupLinearSchedule(optimizer, 
+                                     warmup_steps=round(len(dataloaders['train'])/args.num_epochs*0.1),
+                                     t_total=round(len(dataloaders['train'])/args.num_epochs))
     model.to(device)
 
     ## Training
     # Initialize
     best_model_wts = copy.deepcopy(model.state_dict())
     best_loss = 9999999999
+    early_stop = False
 
     # Train
     for epoch in range(args.num_epochs):
         print('#'*terminal_size())
         print('Epoch {}/{}'.format(epoch + 1, args.num_epochs))
+
+        if early_stop:
+            break
 
         for phase in ['train', 'valid']:
             if phase == 'train':
@@ -132,11 +145,15 @@ def main(args):
                 best_epoch = epoch
                 best_loss = epoch_loss
                 best_model_wts = copy.deepcopy(model.state_dict())
+
+            if phase == 'train' and epoch_loss < 0.001:
+                early_stop = True
+                print('Early Stopping!!!')
                 
             spend_time = (time.time() - start_time) / 60
             print('{} Loss: {:.4f} Acc: {:.4f} Time: {:.3f}min'.format(phase, epoch_loss, epoch_acc, spend_time))
         # Learning rate scheduler
-        lr_step_scheduler.step()
+        scheduler.step()
 
     # Model Saving
     model.load_state_dict(best_model_wts)
@@ -147,6 +164,8 @@ def main(args):
     print('Best validation loss: {:.4f}'.format(best_loss))
     with open(os.path.join(save_path_, 'hyperparameter.json'), 'w') as f:
         json.dump({
+            'efficientnet_not_use': args.efficientnet_not_use,
+            'efficientnet_model_number': args.efficientnet_model_number,
             'num_epochs': args.num_epochs,
             'resize_pixel': args.resize_pixel,
             'random_affine': args.random_affine,
@@ -164,11 +183,15 @@ if __name__=='__main__':
     # Image Setting
     parser.add_argument('--resize_pixel', type=int, default=360, help='Resize pixel')
     parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')
+    # Model Setting
+    parser.add_argument("--efficientnet_not_use", default=False, action="store_true" , help="Do not use EfficientNet")
+    parser.add_argument('--efficientnet_model_number', type=str, default=7, help='EfficientNet model number')
     # Training Setting
     parser.add_argument('--num_epochs', type=int, default=300, help='The number of epoch')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--lr', type=float, default=1e-2, help='Learning rate setting')
     parser.add_argument('--lr_step_size', type=int, default=60, help='Learning rate scheduling step')
+    parser.add_argument('--weight_decay', type=float, default=1e-4, help='Weight decay')
     parser.add_argument('--max_grad_norm', type=int, default=5, help='Gradient clipping max norm')
     parser.add_argument('--valid_ratio', type=float, default=0.1, help='Train / Valid split ratio')
     parser.add_argument('--random_seed', type=int, default=42, help='Random state setting')

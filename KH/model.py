@@ -8,9 +8,10 @@ import torch
 import torchvision
 from torch import nn
 
-class conv_model(nn.Module):
+class ensemble_model(nn.Module):
     def __init__(self):
         super(conv_model, self).__init__()
+        
         # self.efficient_net = EfficientNet.from_name('efficientnet-b0')
         self.efficient_net = EfficientNet.from_pretrained('efficientnet-b0')
         self.output_linear = nn.Linear(1000, 100)

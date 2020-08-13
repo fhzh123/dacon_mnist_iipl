@@ -2,3 +2,4 @@ KH/*.ipynb
 *.ipynb_checkpoints/
 __pycache__/*
 KH/save/*
+KH/__pycache__/*
