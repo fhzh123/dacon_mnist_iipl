@@ -40,7 +40,7 @@ def main(args):
             transforms.RandomAffine(args.random_affine),
             transforms.ColorJitter(brightness=(0.5, 2)),
             transforms.RandomResizedCrop((args.resize_pixel, args.resize_pixel), 
-                                         scale=(0.85, 1)),
+                                        scale=(0.85, 1)),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.1307,), std=(0.3081,))
         ]),
@@ -53,15 +53,15 @@ def main(args):
 
     # Train, valid data split
     train_img_list, valid_img_list = train_valid_split(random_seed=args.random_seed, 
-                                                       data_path=args.data_path,
-                                                       valid_ratio=args.valid_ratio)
+                                                    data_path=args.data_path,
+                                                    valid_ratio=args.valid_ratio)
 
     # Custom dataset & dataloader setting
     image_datasets = {
         'train': CustomDataset(train_img_list, isTrain=True, 
-                               transform=data_transforms['train']),
+                            transform=data_transforms['train']),
         'valid': CustomDataset(valid_img_list, isTrain=True, 
-                               transform=data_transforms['valid'])
+                            transform=data_transforms['valid'])
     }
     dataloaders = {
         'train': DataLoader(image_datasets['train'], batch_size=args.batch_size,
@@ -74,15 +74,18 @@ def main(args):
     # model = models.mobilenet_v2(pretrained=False, num_classes=10)
     # model = conv_model()
     if not args.efficientnet_not_use:
-        model = EfficientNet.from_pretrained(f'efficientnet-b{args.efficientnet_model_number}', num_classes=10)
+        model = EfficientNet.from_pretrained(f'efficientnet-b{args.efficientnet_model_number}', num_classes=26)
     else:
         model = models.resnext50_32x4d(pretrained=False, num_classes=10)
-    # model._fc = nn.Linear(1536, 10)
+        
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
                                             step_size=args.lr_step_size, gamma=args.lr_decay_gamma)
     model.to(device)
+
+    class_names = sorted(list(set(image_datasets['train'].letter)))
+    class_to_idx = {cl: i for i, cl in enumerate(class_names)}
 
     ## Training
     # Initialize
@@ -92,11 +95,9 @@ def main(args):
 
     # Train
     for epoch in range(args.num_epochs):
-        print('#'*terminal_size())
         print('Epoch {}/{}'.format(epoch + 1, args.num_epochs))
 
         if early_stop:
-            print('Early Stopping!!!')
             break
 
         for phase in ['train', 'valid']:
@@ -111,7 +112,7 @@ def main(args):
             # Iterate over data
             for inputs, letters, labels in dataloaders[phase]:
                 inputs = inputs.to(device)
-                labels = torch.tensor([int(x) for x in labels]).to(device)
+                labels = torch.tensor([int(class_to_idx[x]) for x in letters]).to(device)
 
                 # Zero the parameter gradients
                 optimizer.zero_grad()
@@ -144,7 +145,8 @@ def main(args):
 
             if phase == 'train' and epoch_loss < 0.001:
                 early_stop = True
-                
+                print('Early Stopping!!!')
+
             spend_time = (time.time() - start_time) / 60
             print('{} Loss: {:.4f} Acc: {:.4f} Time: {:.3f}min'.format(phase, epoch_loss, epoch_acc, spend_time))
         # Learning rate scheduler
@@ -154,8 +156,8 @@ def main(args):
     model.load_state_dict(best_model_wts)
     if not os.path.exists(args.save_path):
         os.mkdir(args.save_path)
-    if not os.path.exists(os.path.join(args.save_path, 'digit')):
-        os.mkdir(os.path.join(args.save_path, 'digit'))
+    if not os.path.exists(os.path.join(args.save_path, 'letter')):
+        os.mkdir(os.path.join(args.save_path, 'letter'))
     save_path_ = os.path.join(args.save_path, str(datetime.datetime.now())[:-4].replace(' ', '_'))
     os.mkdir(save_path_)
     print('Best validation loss: {:.4f}'.format(best_loss))
@@ -189,7 +191,7 @@ if __name__=='__main__':
     parser.add_argument('--lr', type=float, default=1e-2, help='Learning rate setting')
     parser.add_argument('--lr_step_size', type=int, default=60, help='Learning rate scheduling step')
     parser.add_argument('--lr_decay_gamma', type=float, default=0.5, help='Learning rate decay scheduling per lr_step_size')
-    parser.add_argument('--weight_decay', type=float, default=1e-4, help='Weight decay')
+    parser.add_argument('--weight_decay', type=float, default=1e-2, help='Weight decay')
     parser.add_argument('--max_grad_norm', type=int, default=5, help='Gradient clipping max norm')
     parser.add_argument('--valid_ratio', type=float, default=0.1, help='Train / Valid split ratio')
     parser.add_argument('--random_seed', type=int, default=42, help='Random state setting')

@@ -6,6 +6,8 @@ import termios
 import numpy as np
 from glob import glob
 
+import torch
+
 def terminal_size():
     th, tw, hp, wp = struct.unpack('HHHH',
         fcntl.ioctl(0, termios.TIOCGWINSZ,
@@ -21,3 +23,8 @@ def train_valid_split(random_seed, data_path, valid_ratio):
     valid_img_list = list(np.random.choice(total_train_img_list, size=valid_size))
     train_img_list = list(set(total_train_img_list) - set(valid_img_list))
     return train_img_list, valid_img_list
+
+def init_weights(m):
+    if type(m) == torch.nn.Linear:
+        torch.nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.01)
