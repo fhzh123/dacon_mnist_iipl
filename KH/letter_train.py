@@ -158,7 +158,7 @@ def main(args):
         os.mkdir(args.save_path)
     if not os.path.exists(os.path.join(args.save_path, 'letter')):
         os.mkdir(os.path.join(args.save_path, 'letter'))
-    save_path_ = os.path.join(args.save_path, str(datetime.datetime.now())[:-4].replace(' ', '_'))
+    save_path_ = os.path.join(os.path.join(args.save_path, 'letter'), str(datetime.datetime.now())[:-4].replace(' ', '_'))
     os.mkdir(save_path_)
     print('Best validation loss: {:.4f}'.format(best_loss))
     with open(os.path.join(save_path_, 'hyperparameter.json'), 'w') as f:
