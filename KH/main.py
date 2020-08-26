@@ -24,7 +24,7 @@ from torchvision import transforms, models
 from torch.utils.data import Dataset, DataLoader
 
 # Import Custom Module
-from model import ensemble_model
+from model import conv_model
 from dataset import CustomDataset
 from optimizer import WarmupLinearSchedule, Ralamb
 from utils import terminal_size, train_valid_split
@@ -71,13 +71,9 @@ def main(args):
     }
 
     # Model Setting
-    # model = models.mobilenet_v2(pretrained=False, num_classes=10)
-    # model = conv_model()
-    if not args.efficientnet_not_use:
-        model = EfficientNet.from_pretrained(f'efficientnet-b{args.efficientnet_model_number}', num_classes=10)
-    else:
-        model = models.resnext50_32x4d(pretrained=False, num_classes=10)
-    # model._fc = nn.Linear(1536, 10)
+    model = conv_model(efficientnet_not_use=False,
+                       efficient_model_number=4,
+                       letter_model_path=args.letter_model_path)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
@@ -177,6 +173,7 @@ if __name__=='__main__':
     # Path Setting
     parser.add_argument('--data_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--save_path', type=str, default='./KH/save')
+    parser.add_argument('--letter_model_path', type=str, default='./KH/save/letter/2020-08-16_01:21:55.04/')
     # Image Setting
     parser.add_argument('--resize_pixel', type=int, default=360, help='Resize pixel')
     parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')

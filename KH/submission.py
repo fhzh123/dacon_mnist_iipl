@@ -17,6 +17,7 @@ from torch.utils.data import Dataset, DataLoader
 
 # Import Custom Module
 from dataset import CustomDataset
+from model import conv_model
 
 def main(args):
     # Device setting
@@ -29,7 +30,10 @@ def main(args):
 
     # Model Load & Setting
     # model = models.wide_resnet50_2(pretrained=False, num_classes=10)
-    model = EfficientNet.from_pretrained('efficientnet-b4', num_classes=10)
+    # model = EfficientNet.from_pretrained('efficientnet-b5', num_classes=10)
+    model = conv_model(efficientnet_not_use=False,
+                       efficient_model_number=4,
+                       letter_model_path=args.letter_model_path)
     model.load_state_dict(torch.load(os.path.join(args.model_path, 'model.pt')))
     model.eval()
     model.to(device)
@@ -70,6 +74,7 @@ if __name__=='__main__':
     parser.add_argument('--data_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--model_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--submission_save_path', type=str, default='./KH/save')
+    parser.add_argument('--letter_model_path', type=str, default='./KH/save/letter/2020-08-16_01:21:55.04/')
     # Image Setting
     parser.add_argument('--batch_size', type=int, default=32, help='Test batch size')
     args = parser.parse_args()
