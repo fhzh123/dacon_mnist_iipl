@@ -18,16 +18,13 @@ import torch
 import torchvision
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.utils as torch_utils
 from torch.optim import lr_scheduler
 from torchvision import transforms, models
 from torch.utils.data import Dataset, DataLoader
 
 # Import Custom Module
-from model import conv_model
 from dataset import CustomDataset
-from optimizer import WarmupLinearSchedule, Ralamb, RAdam
-from utils import terminal_size, train_valid_split
+from utils import train_valid_split
 
 def main(args):
     # Device setting
@@ -42,19 +39,17 @@ def main(args):
             transforms.RandomResizedCrop((args.resize_pixel, args.resize_pixel), 
                                          scale=(0.85, 1)),
             transforms.ToTensor(),
-            # transforms.Normalize(mean=(0.1307,), std=(0.3081,))
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             transforms.RandomErasing(p=0.3, scale=(0.01, 0.05))
         ]),
         'valid': transforms.Compose([
             transforms.Resize((args.resize_pixel, args.resize_pixel)),
             transforms.ToTensor(),
-            # transforms.Normalize(mean=(0.1307,), std=(0.3081,))
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         ])
     }
 
-    # Train, valid data split
+    # Train, valid data split (Check utils module)
     train_img_list, valid_img_list = train_valid_split(random_seed=args.random_seed, 
                                                        data_path=args.data_path,
                                                        valid_ratio=args.valid_ratio)
@@ -74,18 +69,11 @@ def main(args):
     }
 
     # Model Setting
-    model = conv_model(efficientnet_not_use=False,
-                       efficient_model_number=4,
-                       letter_model_path=args.letter_model_path)
+    model = torchvision.models.mobilenet_v2(pretrained=False, num_classes=10)
     criterion = nn.CrossEntropyLoss()
-    # optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
-    optimizer = RAdam(params=filter(lambda p: p.requires_grad, model.parameters()),
-                       lr=args.lr)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
                                             step_size=args.lr_step_size, gamma=args.lr_decay_gamma)
-    # lr_step_scheduler = WarmupLinearSchedule(optimizer, 
-    #                                          warmup_steps=round(len(dataloaders['train'])/args.num_epochs*0.1),
-    #                                          t_total=round(len(dataloaders['train'])/args.num_epochs))
     model.to(device)
 
     ## Training
@@ -96,12 +84,12 @@ def main(args):
 
     # Train
     for epoch in range(args.num_epochs):
-        print('#'*terminal_size())
-        print('Epoch {}/{}'.format(epoch + 1, args.num_epochs))
 
         if early_stop:
             print('Early Stopping!!!')
             break
+
+        print('Epoch {}/{}'.format(epoch + 1, args.num_epochs))
 
         for phase in ['train', 'valid']:
             if phase == 'train':
@@ -129,8 +117,6 @@ def main(args):
                     # Backward + optimize only if in training phase
                     if phase == 'train':
                         loss.backward()
-                        torch_utils.clip_grad_norm_(model.parameters(), 
-                                                    args.max_grad_norm)
                         optimizer.step() 
 
                 # Statistics
@@ -141,14 +127,17 @@ def main(args):
             epoch_loss = running_loss / len(image_datasets[phase])
             epoch_acc = running_corrects.double() / len(image_datasets[phase])
 
+            # If loss is best_loss, then save
             if phase == 'valid' and epoch_loss < best_loss:
                 best_epoch = epoch
                 best_loss = epoch_loss
                 best_model_wts = copy.deepcopy(model.state_dict())
 
+            # Early stop conditioning
             if phase == 'train' and epoch_loss < 0.001:
                 early_stop = True
                 
+            # Print progress
             spend_time = (time.time() - start_time) / 60
             print('{} Loss: {:.4f} Acc: {:.4f} Time: {:.3f}min'.format(phase, epoch_loss, epoch_acc, spend_time))
         # Learning rate scheduler
@@ -195,7 +184,6 @@ if __name__=='__main__':
     parser.add_argument('--lr_step_size', type=int, default=60, help='Learning rate scheduling step')
     parser.add_argument('--lr_decay_gamma', type=float, default=0.5, help='Learning rate decay scheduling per lr_step_size')
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='Weight decay')
-    parser.add_argument('--max_grad_norm', type=int, default=5, help='Gradient clipping max norm')
     parser.add_argument('--valid_ratio', type=float, default=0.1, help='Train / Valid split ratio')
     parser.add_argument('--random_seed', type=int, default=42, help='Random state setting')
     parser.add_argument('--num_workers', type=int, default=8, help='CPU worker setting')
@@ -203,4 +191,4 @@ if __name__=='__main__':
 
     total_start_time = time.time()
     main(args)
-    print('Done! {:.4f}min spend!'.format((time.time() - total_start_time)/60))
+    print('All Done! {:.4f}min spend!'.format((time.time() - total_start_time)/60))
