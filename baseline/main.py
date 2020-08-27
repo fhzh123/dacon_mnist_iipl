@@ -8,10 +8,6 @@ import argparse
 import datetime
 import numpy as np
 import pandas as pd
-from PIL import Image
-from glob import glob
-from tqdm import tqdm
-from efficientnet_pytorch import EfficientNet
 
 # Import PyTorch
 import torch
