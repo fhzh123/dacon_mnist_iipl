@@ -162,7 +162,7 @@ def main(args):
     torch.save(model.state_dict(), os.path.join(save_path_, 'model.pt'))
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser(description='Order_net argparser')
+    parser = argparse.ArgumentParser(description='argparser')
     # Path Setting
     parser.add_argument('--data_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--save_path', type=str, default='./KH/save')
@@ -170,9 +170,6 @@ if __name__=='__main__':
     # Image Setting
     parser.add_argument('--resize_pixel', type=int, default=360, help='Resize pixel')
     parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')
-    # Model Setting
-    parser.add_argument("--efficientnet_not_use", default=False, action="store_true" , help="Do not use EfficientNet")
-    parser.add_argument('--efficientnet_model_number', type=str, default=7, help='EfficientNet model number')
     # Training Setting
     parser.add_argument('--num_epochs', type=int, default=300, help='The number of epoch')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')

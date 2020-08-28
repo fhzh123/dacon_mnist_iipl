@@ -24,9 +24,8 @@ from torchvision import transforms, models
 from torch.utils.data import Dataset, DataLoader
 
 # Import Custom Module
-from model import ensemble_model
 from dataset import CustomDataset
-from optimizer import WarmupLinearSchedule, Ralamb
+from optimizer import WarmupLinearSchedule, Ralamb, RAdam
 from utils import terminal_size, train_valid_split
 
 def main(args):
@@ -42,12 +41,13 @@ def main(args):
             transforms.RandomResizedCrop((args.resize_pixel, args.resize_pixel), 
                                         scale=(0.85, 1)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=(0.1307,), std=(0.3081,))
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            transforms.RandomErasing(p=0.3, scale=(0.01, 0.05))
         ]),
         'valid': transforms.Compose([
             transforms.Resize((args.resize_pixel, args.resize_pixel)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=(0.1307,), std=(0.3081,))
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         ])
     }
 
@@ -74,12 +74,14 @@ def main(args):
     # model = models.mobilenet_v2(pretrained=False, num_classes=10)
     # model = conv_model()
     if not args.efficientnet_not_use:
-        model = EfficientNet.from_pretrained(f'efficientnet-b{args.efficientnet_model_number}', num_classes=26)
+        model = EfficientNet.from_name(f'efficientnet-b{args.efficientnet_model_number}')
+        model._fc = nn.Linear(2304, 26)
     else:
         model = models.resnext50_32x4d(pretrained=False, num_classes=10)
         
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
+    optimizer = RAdam(params=filter(lambda p: p.requires_grad, model.parameters()),
+                       lr=args.lr)
     lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
                                             step_size=args.lr_step_size, gamma=args.lr_decay_gamma)
     model.to(device)

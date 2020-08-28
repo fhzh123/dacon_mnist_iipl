@@ -30,18 +30,18 @@ class conv_model(nn.Module):
                                                                      'model.pt')))
         
         #
-        self.efficient_net = EfficientNet.from_name('efficientnet-b4')
-        self.batch_norm_2d = nn.BatchNorm2d(1792, eps=1e-3, momentum=1e-2)
+        self.efficient_net = EfficientNet.from_name(f'efficientnet-b{efficient_model_number}')
+        self.batch_norm_2d = nn.BatchNorm2d(2304, eps=1e-3, momentum=1e-2)
         self.adaptive_avgpool = nn.AdaptiveAvgPool2d(output_size=1)
         self.last_dropout = nn.Dropout(0.2)
-        self.last_linear = nn.Linear(1792, 10)
+        self.last_linear = nn.Linear(2304, 10)
         
     def forward(self, input_img):
         feature_extracted_ = self.efficient_net.extract_features(input_img)
         letter_feature_extracted_ = self.letter_model.extract_features(input_img)
         feature_ = feature_extracted_ - letter_feature_extracted_
         output = self.last_dropout(self.adaptive_avgpool(self.batch_norm_2d(feature_)))
-        output = output.view(-1, 1792)
+        output = output.view(-1, 2304)
         model_output = mish(self.last_linear(output))
         return model_output
 

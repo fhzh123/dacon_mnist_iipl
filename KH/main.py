@@ -8,6 +8,7 @@ import argparse
 import datetime
 import numpy as np
 import pandas as pd
+import albumentations as A
 from PIL import Image
 from glob import glob
 from tqdm import tqdm
@@ -75,7 +76,7 @@ def main(args):
 
     # Model Setting
     model = conv_model(efficientnet_not_use=False,
-                       efficient_model_number=4,
+                       efficient_model_number=6,
                        letter_model_path=args.letter_model_path)
     criterion = nn.CrossEntropyLoss()
     # optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
@@ -160,7 +161,7 @@ def main(args):
         os.mkdir(args.save_path)
     if not os.path.exists(os.path.join(args.save_path, 'digit')):
         os.mkdir(os.path.join(args.save_path, 'digit'))
-    save_path_ = os.path.join(os.path.join(args.save_path, 'digit'), str(datetime.datetime.now())[:-4].replace(' ', '_'))
+    save_path_ = os.path.join(os.path.join(args.save_path, 'digit'), str(datetime.datetime.now())[:10] + f'_{best_loss}')
     os.mkdir(save_path_)
     print('Best validation loss: {:.4f}'.format(best_loss))
     with open(os.path.join(save_path_, 'hyperparameter.json'), 'w') as f:
@@ -181,7 +182,7 @@ if __name__=='__main__':
     # Path Setting
     parser.add_argument('--data_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--save_path', type=str, default='./KH/save')
-    parser.add_argument('--letter_model_path', type=str, default='./KH/save/letter/2020-08-16_01:21:55.04/')
+    parser.add_argument('--letter_model_path', type=str, default='./KH/save/letter/2020-08-28_06:29:07.02/')
     # Image Setting
     parser.add_argument('--resize_pixel', type=int, default=360, help='Resize pixel')
     parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')

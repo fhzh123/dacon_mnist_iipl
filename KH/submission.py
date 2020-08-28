@@ -29,10 +29,8 @@ def main(args):
     resize_pixel = info_['resize_pixel']
 
     # Model Load & Setting
-    # model = models.wide_resnet50_2(pretrained=False, num_classes=10)
-    # model = EfficientNet.from_pretrained('efficientnet-b5', num_classes=10)
     model = conv_model(efficientnet_not_use=False,
-                       efficient_model_number=4,
+                       efficient_model_number=6,
                        letter_model_path=args.letter_model_path)
     model.load_state_dict(torch.load(os.path.join(args.model_path, 'model.pt')))
     model.eval()
