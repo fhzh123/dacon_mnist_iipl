@@ -97,7 +97,7 @@ def main(args):
             start_time = time.time()
 
             # Iterate over data
-            for inputs, letters, labels in dataloaders[phase]:
+            for inputs, _, labels in dataloaders[phase]:
                 inputs = inputs.to(device)
                 labels = torch.tensor([int(x) for x in labels]).to(device)
 
@@ -147,7 +147,7 @@ def main(args):
         os.mkdir(os.path.join(args.save_path, 'digit'))
     save_path_ = os.path.join(os.path.join(args.save_path, 'digit'), str(datetime.datetime.now())[:-4].replace(' ', '_'))
     os.mkdir(save_path_)
-    print('Best validation loss: {:.4f}'.format(best_loss))
+    print('Best validation loss: {:.4f} when epoch {}'.format(best_loss, best_epoch))
     with open(os.path.join(save_path_, 'hyperparameter.json'), 'w') as f:
         json.dump({
             'efficientnet_not_use': args.efficientnet_not_use,

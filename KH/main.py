@@ -82,8 +82,9 @@ def main(args):
     # optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     optimizer = RAdam(params=filter(lambda p: p.requires_grad, model.parameters()),
                        lr=args.lr)
-    lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
-                                            step_size=args.lr_step_size, gamma=args.lr_decay_gamma)
+    # lr_step_scheduler = lr_scheduler.StepLR(optimizer, 
+    #                                         step_size=args.lr_step_size, gamma=args.lr_decay_gamma)
+    lr_step_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, factor=args.lr_decay_gamma, patience=10)
     # lr_step_scheduler = WarmupLinearSchedule(optimizer, 
     #                                          warmup_steps=round(len(dataloaders['train'])/args.num_epochs*0.1),
     #                                          t_total=round(len(dataloaders['train'])/args.num_epochs))
@@ -136,6 +137,8 @@ def main(args):
 
                 # Statistics
                 running_loss += loss.item() * inputs.size(0)
+                if phase=='valid':
+                    val_loss = running_loss
                 running_corrects += torch.sum(preds == labels.data)
 
             # Epoch loss calculate
@@ -153,7 +156,7 @@ def main(args):
             spend_time = (time.time() - start_time) / 60
             print('{} Loss: {:.4f} Acc: {:.4f} Time: {:.3f}min'.format(phase, epoch_loss, epoch_acc, spend_time))
         # Learning rate scheduler
-        lr_step_scheduler.step()
+        lr_step_scheduler.step(val_loss)
 
     # Model Saving
     model.load_state_dict(best_model_wts)
@@ -161,6 +164,7 @@ def main(args):
         os.mkdir(args.save_path)
     if not os.path.exists(os.path.join(args.save_path, 'digit')):
         os.mkdir(os.path.join(args.save_path, 'digit'))
+    best_loss = round(best_loss, 4)
     save_path_ = os.path.join(os.path.join(args.save_path, 'digit'), str(datetime.datetime.now())[:10] + f'_{best_loss}')
     os.mkdir(save_path_)
     print('Best validation loss: {:.4f}'.format(best_loss))

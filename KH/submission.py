@@ -41,7 +41,7 @@ def main(args):
     test_transforms = transforms.Compose([
         transforms.Resize((resize_pixel, resize_pixel)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=(0.1307,), std=(0.3081,))
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     ])
     test_dataset = CustomDataset(test_img_list, isTrain=False, transform=test_transforms)
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=1)
@@ -72,7 +72,7 @@ if __name__=='__main__':
     parser.add_argument('--data_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--model_path', type=str, default='./data', help='Data path setting')
     parser.add_argument('--submission_save_path', type=str, default='./KH/save')
-    parser.add_argument('--letter_model_path', type=str, default='./KH/save/letter/2020-08-16_01:21:55.04/')
+    parser.add_argument('--letter_model_path', type=str, default='./KH/save/letter/2020-08-28_06:29:07.02/')
     # Image Setting
     parser.add_argument('--batch_size', type=int, default=32, help='Test batch size')
     args = parser.parse_args()
