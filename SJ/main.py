@@ -5,19 +5,32 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import warnings 
 from CustomDataset import CustomDataset
+from split_dataset import split_dataset_function
 warnings.filterwarnings("ignore")
 import torch 
 from torchvision import transforms, models
+from skimage import io
 
 
-class Net(nn.module):
-    
+#class Net(nn.module):
+    #def __init__(self):
+        #super(Net,self).__init__()
+
+
+
+    #def forward(self,x):
+
+
+
+
 
 
 def main(args):
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     data_transforms={
+
+        
         'train': transforms.Compose([
                 transforms.Resize((args.resize_pixel, args.resize_pixel)),
                 transforms.RandomAffine(args.random_affine),
@@ -37,14 +50,27 @@ def main(args):
                  
 
     }
-    whole_train_dataset=CustomDataset('train_dataset_list.csv',args.data_path+'/train',data_transforms)
 
-    train_size=int(0.8*len(whole_train_dataset))
-    validation_size=len(whole_train_dataset)-train_size
+    train_data_list, validation_data_list=split_dataset_function(args.train_data_name)
 
-    train_set, val_set=torch.utils.data.random_split(whole_train_dataset, [train_size,validation_size])
+    train_dataset=CustomDataset(train_data_list,args.data_path,data_transforms['train'])
+
+    #validation_dataset=
+
+    #whole_train_dataset=CustomDataset('train_dataset_list.csv',args.data_path+'/train')
+
+    #train_size=int(0.8*len(whole_train_dataset))
+    #validation_size=len(whole_train_dataset)-train_size
+
+    #train_set, val_set=torch.utils.data.random_split(whole_train_dataset, [train_size,validation_size])
     
+    #print(whole_train_dataset[2])
+    #plt.imshow(train_set[2]["image"])
+    #plt.show()
 
+    #train_set=data_transforms['train']
+    
+    
     
 #train모드 
 
@@ -57,6 +83,7 @@ def main(args):
 if __name__=="__main__":
 
     parser=argparse.ArgumentParser(description='Order_net argparser')
+    parser.add_argument('--train_data_name',type=str, default='train_dataset_list.csv', help='Data path setting')
     parser.add_argument('--data_path',type=str, default='./data', help='Data path setting')
     parser.add_argument('--save_path',type=str, default='./save')
     #parser.add_argument('--letter_model_path') #사용용도를 아직 잘 모르겠어서 우선 skip
