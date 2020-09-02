@@ -12,17 +12,65 @@ from torchvision import transforms, models
 from skimage import io
 
 
-#class Net(nn.module):
-    #def __init__(self):
-        #super(Net,self).__init__()
+class CNNClassifier(nn.Module):
+
+    def __init__(self):
+    super(CNNClassifier,self).__init__()
+    conv1=nn.Conv2d(3,6,kernel_size=5)
+    conv2=nn.Conv2d(6,16,kernel_size=5)
+    fc1=nn.Linear(-1,16)
 
 
+    def forward(self,x):
+        x=self.conv1(x)
+        x=F.relu(x)
+        x=F.max_pool2d(x,2)
+        x=self.conv2(x)
+        x=F.relu(x)
+        x=F.max_pool2d(x,2)
+        x=self.fc1(x)
+        output=F.log_softmax(x)
+        return output
 
-    #def forward(self,x):
+def train(args, model, device, train_loader, optimizer, epoch):
+    model.train()
+    for batch_idx, (img, digit, letter) in enumerate(train_loader):
+        
+        if torch.cuda.is_available:
+            img=img.cuda()
+            digit=digit.cuda()
 
+    optimizer.zero_grad()
+    output=model(img)
+    loss=F.nll_loss(output, digit)
+    loss.backward()
+    optimizer.step()
 
+    if batch_idx % args.log_interval==0:
+         print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format( epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))
 
+    if args.dry_run:
+        break
 
+def test(model, device, test_loader):
+    model.eval()
+    test_loss=0
+    correct=0
+    with torch.no_grad():
+        for img, digit in test_loader:
+            if torch.cuda.is_available:
+            img=img.cuda()
+            digit=digit.cuda() 
+            output=model(img)
+            test_loss+=F.nll_loss(output, digit, reduction='sum').item() #sum up batch loss
+            pred=output.argmax(dim=1, keepdim=True) # get the index of the max log-probability 
+            correct+=pred.eq(target.view_as(pred)).sum().item()
+
+    test_loss/=len(test_loader.dataset)
+
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct, len(test_loader.dataset),100. * correct / len(test_loader.dataset)))
+
+    
 
 
 def main(args):
@@ -53,23 +101,15 @@ def main(args):
 
     train_data_list, validation_data_list=split_dataset_function(args.train_data_name)
 
-    train_dataset=CustomDataset(train_data_list,args.data_path,data_transforms['train'])
+    train_dataset=CustomDataset(train_data_list,args.data_path,data_transforms['train'], IsTrain=True)
 
-    #validation_dataset=
+    validation_dataset=CustomDataset(validation_data_list,args.data_path,data_transforms['valid'], IsTrain=False)
 
-    #whole_train_dataset=CustomDataset('train_dataset_list.csv',args.data_path+'/train')
-
-    #train_size=int(0.8*len(whole_train_dataset))
-    #validation_size=len(whole_train_dataset)-train_size
-
-    #train_set, val_set=torch.utils.data.random_split(whole_train_dataset, [train_size,validation_size])
     
-    #print(whole_train_dataset[2])
-    #plt.imshow(train_set[2]["image"])
-    #plt.show()
-
-    #train_set=data_transforms['train']
+    train_dataloader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    validation_dataloader=DataLoader(validation_dataset, batch_size=args.batch_size, shuffle=True)
     
+
     
     
 #train모드 
@@ -97,8 +137,8 @@ if __name__=="__main__":
     #parser.add_argument("--efficientnet_model_number", type=str, default=7, help='Efficient model number ')
 
     #Training Setting
-    #parser.add_argument('--num_epochs', type=int, default=300, help='The number of epoch')
-    #parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
+    parser.add_argument('--num_epochs', type=int, default=200, help='The number of epoch')
+    parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     #parser.add_argument('--lr', type=float, default=le-2, help='Learning rate setting')
     #parser.add_argument('--lr_step_size', type=int, default=60, help='Learning rate scheduling step')
     #parser.add_argument('--lr_decay_gamma', type=float, default=0.5, help='Learning rate decay )
@@ -106,7 +146,7 @@ if __name__=="__main__":
     #parser.add_argument('--max_grad_norm', type=int, default=5, help='Gradient clipping max norm')
     #parser.add_argument('--valid_ratio', type=float, default=0.1, help='Train/Valid split ratio')
     #parser.add_argument('--random_seed', type=int, default=42, help='Random state setting')
-    #parser.add_argument('--num_workers', type=int, default=8, help='CPU worker setting')
+    parser.add_argument('--num_workers', type=int, default=8, help='CPU worker setting')
     
     #입력받은 인자값을 args에 저장 (type: namespace)
     args=parser.parse_args()

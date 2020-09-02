@@ -1,14 +1,19 @@
 import torch 
 from torch.utils.data import Dataset, DataLoader
+from PIL import Image
 import pandas as pd 
+import os
+
 
 class CustomDataset(Dataset):
     
-    def __init__(self, csv_file, root_dir, transform=None):
+    def __init__(self, dataset_list, root_dir, transform=None,IsTrain ):
 
         self.original_csv=pd.read_csv(csv_file)
         self.root_dir=root_dir
+        self.dataset_list=dataset_list
         self.transform=transform
+        self.IsTrain=IsTrain
        
 
     def __getitem__(self, idx):
@@ -28,13 +33,24 @@ class CustomDataset(Dataset):
         #letter
         letter= csv_content['letter']
 
-        img_path=os.path.join(self.root_dir+'/'+digit, file_name )
+        img_path=os.path.join(self.root_dir+'/'+str(digit)+'/', file_name )
         
-        image=io.imread(img_path)
+        image=Image.open(img_path)
 
-        sample={'image':image, 'digit':digit, 'letter':letter}
+        image=image.convert('RGB')
 
-        return sample
+        if self.isTrain:
+                
+            if self.transform is not None:
+                image=self.transform(image)
+        
+            return image, digit, ltetter
+
+        else:
+                if self.transform is not None:
+                image=self.transform(image)
+            return image, digit, letter
+        
 
 
     def __len__(self):

@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd 
 
+#생각해보니까 이거 random sampling 형식으로 짜야할거 같은데 다시 짜보기 
+
 def split_dataset_function(target_csv):
     
     csv_content=pd.read_csv(target_csv)
 
-    #csv_content_to_list=csv_content['file_name'].values.tolist()
-    #csv_content_to_set=set(csv_content_to_list)
+
     
     train_size=int(0.8*len(csv_content))
 
@@ -19,11 +20,6 @@ def split_dataset_function(target_csv):
 
 
 
-    
-    #train_data_set=set(np.random.choice(csv_content_to_list,train_size))
-    #validation_data_set=csv_content_to_set.difference(train_data_set)
 
-    #train_data=list(train_data_set)
-    #validation_data=list(validation_data_set)
 
     return train_data, validation_data

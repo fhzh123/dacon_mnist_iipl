@@ -16,12 +16,12 @@ def img_save(dataset,isTrain=True): #main 함수에서 불러온 csv dataset을 
         for_image_dataset=dataset.drop(columns=['id','letter','digit'])
         f=open('train_dataset_list'+'.csv','w',encoding='utf-8')
         wr=csv.writer(f)
-        wr.writerow(['file_name','digit','letter'])
+        wr.writerow(['index','file_name','digit','letter'])
     else:
         for_image_dataset=dataset.drop(columns=['id','letter']) #Test의 경우 digit을 배열이 없음.  
         f=open('test_dataset_list'+'.csv','w',encoding='utf-8')
         wr=csv.writer(f)
-        wr.writerow(['file_name','digit','letter'])
+        wr.writerow(['index','file_name','digit','letter'])
     for i in tqdm(range(len(dataset))): #tqdm: for문의 progress bar 출력 
         id_=dataset.iloc[i]['id']
         letter_=dataset.iloc[i]['letter']
@@ -32,10 +32,10 @@ def img_save(dataset,isTrain=True): #main 함수에서 불러온 csv dataset을 
             if not os.path.exists(os.path.join('./data/train/',digit_)):
                 os.mkdir(os.path.join('./data/train/',digit_))
             img.save(os.path.join(f'./data/train/{digit_}/',f'{id_}_{letter_}.jpg'))
-            wr.writerow([1,f'{id_}_{letter_}.jpg',digit_,letter_])
+            wr.writerow([i,f'{id_}_{letter_}.jpg',digit_,letter_])
         else:
             img.save(os.path.join(f'./data/test/',f'{id_}_{letter_}.jpg'))
-            wr.writerow([1,f'{id_}_{letter_}.jpg','',letter_])
+            wr.writerow([i,f'{id_}_{letter_}.jpg','',letter_])
 
 
 def main(args):
