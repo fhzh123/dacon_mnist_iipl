@@ -4,53 +4,79 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt 
 import warnings 
+warnings.filterwarnings("ignore")
 from CustomDataset import CustomDataset
 from split_dataset import split_dataset_function
-warnings.filterwarnings("ignore")
 import torch 
+from torch import nn
+from torch.nn import functional as F
 from torchvision import transforms, models
 from skimage import io
+from torch.utils.data import DataLoader
+import torch.optim as optim
 
 
 class CNNClassifier(nn.Module):
 
-    def __init__(self):
-    super(CNNClassifier,self).__init__()
-    conv1=nn.Conv2d(3,6,kernel_size=5)
-    conv2=nn.Conv2d(6,16,kernel_size=5)
-    fc1=nn.Linear(-1,16)
+    #def __init__(self):
+    #    super(CNNClassifier,self).__init__()
+    #    self.conv1=nn.Conv2d(3,6,kernel_size=5)
+    #    self.conv2=nn.Conv2d(6,16,kernel_size=5)
+    #    self.fc1=nn.Linear(16,10)
 
+    def __init__(self):
+        super(CNNClassifier, self).__init__()
+        conv1=nn.Conv2d(3,6,5,1)
+        pool1=nn.MaxPool2d(2)
+        conv2=nn.Conv2d(6,16,5,1)
+        pool2=nn.MaxPool2d(2)
+
+
+        self.conv_module=nn.Sequential(conv1, nn.ReLU(), pool1, conv2, nn.ReLU(), pool2)
+
+        fc1=nn.Linear(16*4*4, 120)
+        fc2=nn.Linear(120,84)
+        fc3=nn.Linear(84,10)
+
+        self.fc_module=nn.Sequential(fc1, nn.ReLU(), fc2, nn.ReLU(), fc3)
 
     def forward(self,x):
-        x=self.conv1(x)
-        x=F.relu(x)
-        x=F.max_pool2d(x,2)
-        x=self.conv2(x)
-        x=F.relu(x)
-        x=F.max_pool2d(x,2)
-        x=self.fc1(x)
-        output=F.log_softmax(x)
-        return output
+        out=self.conv_module(x)
+        dim=1
+        for d in out.size()[1:]:
+            dim=dim*d
+        out=out.view(-1,dim)
+        out=self.fc_module(out)
+        return F.softmax(out,dim=1)
+
+    #def forward(self,x):
+    #    x=self.conv1(x)
+    #    x=F.relu(x)
+    #    x=F.max_pool2d(x,2)
+    #    x=self.conv2(x)
+    #    x=F.relu(x)
+    #    x=F.max_pool2d(x,2)
+    #    x=x.view(-1,16)
+    #    x=self.fc1(x)
+    #    output=F.log_softmax(x)
+    #    return output
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (img, digit, letter) in enumerate(train_loader):
         
-        if torch.cuda.is_available:
-            img=img.cuda()
-            digit=digit.cuda()
+        #if torch.cuda.is_available:
+            #img=img.cuda()
+            #digit=digit.cuda()
 
-    optimizer.zero_grad()
-    output=model(img)
-    loss=F.nll_loss(output, digit)
-    loss.backward()
-    optimizer.step()
+        optimizer.zero_grad()
+        output=model(img)
+        loss=F.nll_loss(output, digit)
+        loss.backward()
+        optimizer.step()
 
-    if batch_idx % args.log_interval==0:
-         print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format( epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))
-
-    if args.dry_run:
-        break
+    if batch_idx % args.batch_size==0:
+        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format( epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))
 
 def test(model, device, test_loader):
     model.eval()
@@ -59,8 +85,8 @@ def test(model, device, test_loader):
     with torch.no_grad():
         for img, digit in test_loader:
             if torch.cuda.is_available:
-            img=img.cuda()
-            digit=digit.cuda() 
+                img=img.cuda()
+                digit=digit.cuda() 
             output=model(img)
             test_loss+=F.nll_loss(output, digit, reduction='sum').item() #sum up batch loss
             pred=output.argmax(dim=1, keepdim=True) # get the index of the max log-probability 
@@ -69,8 +95,6 @@ def test(model, device, test_loader):
     test_loss/=len(test_loader.dataset)
 
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct, len(test_loader.dataset),100. * correct / len(test_loader.dataset)))
-
-    
 
 
 def main(args):
@@ -101,16 +125,25 @@ def main(args):
 
     train_data_list, validation_data_list=split_dataset_function(args.train_data_name)
 
-    train_dataset=CustomDataset(train_data_list,args.data_path,data_transforms['train'], IsTrain=True)
+    train_dataset=CustomDataset(train_data_list,args.data_path+'/train',data_transforms['train'])
 
-    validation_dataset=CustomDataset(validation_data_list,args.data_path,data_transforms['valid'], IsTrain=False)
+    validation_dataset=CustomDataset(validation_data_list,args.data_path+'/train',data_transforms['valid'])
 
     
     train_dataloader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     validation_dataloader=DataLoader(validation_dataset, batch_size=args.batch_size, shuffle=True)
     
-
+    model=CNNClassifier()
+    optimizer=optim.Adam(model.parameters() )
     
+    #scheduler=StepLR(optimizer, step_size=1, gamma=args.gamma)
+    for epoch in range(1, args.num_epochs+1):
+        train(args,model,device,train_dataloader, optimizer, epoch)
+        test(model, device, validation_dataloader)
+        #scheduler.step()
+
+    #if args.save_model:
+        #torch.save()
     
 #train모드 
 
@@ -129,7 +162,7 @@ if __name__=="__main__":
     #parser.add_argument('--letter_model_path') #사용용도를 아직 잘 모르겠어서 우선 skip
     
     #Image Setting
-    parser.add_argument('--resize_pixel', type=int, default=360, help='Resize pixel')
+    parser.add_argument('--resize_pixel', type=int, default=28, help='Resize pixel')
     parser.add_argument('--random_affine',type=int, default=10, help='Random affine transformation ratio')
 
     #Model Setting 
@@ -151,5 +184,3 @@ if __name__=="__main__":
     #입력받은 인자값을 args에 저장 (type: namespace)
     args=parser.parse_args()
     main(args)
-    
-

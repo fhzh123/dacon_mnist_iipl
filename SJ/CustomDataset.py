@@ -7,13 +7,13 @@ import os
 
 class CustomDataset(Dataset):
     
-    def __init__(self, dataset_list, root_dir, transform=None,IsTrain ):
+    def __init__(self, dataset_list, root_dir,transform=None):
 
-        self.original_csv=pd.read_csv(csv_file)
+        self.original_csv=dataset_list
         self.root_dir=root_dir
         self.dataset_list=dataset_list
         self.transform=transform
-        self.IsTrain=IsTrain
+    
        
 
     def __getitem__(self, idx):
@@ -39,20 +39,13 @@ class CustomDataset(Dataset):
 
         image=image.convert('RGB')
 
-        if self.isTrain:
-                
-            if self.transform is not None:
-                image=self.transform(image)
-        
-            return image, digit, ltetter
-
-        else:
-                if self.transform is not None:
-                image=self.transform(image)
-            return image, digit, letter
+        if self.transform is not None:
+            image=self.transform(image)
+    
+        return image, digit, letter
         
 
 
     def __len__(self):
-            return len(self.original_csv)
+        return len(self.original_csv)
     
