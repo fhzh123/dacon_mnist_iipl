@@ -31,18 +31,26 @@ class conv_model(nn.Module):
         
         #
         self.efficient_net = EfficientNet.from_name(f'efficientnet-b{efficient_model_number}')
-        self.batch_norm_2d = nn.BatchNorm2d(2304, eps=1e-3, momentum=1e-2)
+        self.batch_norm_2d = nn.BatchNorm2d(256, eps=1e-3, momentum=1e-2) # 256 -> 2304
         self.adaptive_avgpool = nn.AdaptiveAvgPool2d(output_size=1)
-        self.last_dropout = nn.Dropout(0.2)
+        self.last_dropout = nn.Dropout(0.1)
         self.last_linear = nn.Linear(2304, 10)
+
+        self.test_linear1 = nn.Linear(2304, 512)
+        self.test_linear2 = nn.Linear(2304, 512)
+        self.test_bilinear = nn.Bilinear(512, 512, 256)
+        self.test_last_linear = nn.Linear(256, 10)
         
     def forward(self, input_img):
-        feature_extracted_ = self.efficient_net.extract_features(input_img)
-        letter_feature_extracted_ = self.letter_model.extract_features(input_img)
-        feature_ = feature_extracted_ - letter_feature_extracted_
+        feature_extracted_ = self.test_linear1(self.efficient_net.extract_features(input_img).view(-1, 11, 11,2304))
+        letter_feature_extracted_ = self.test_linear2(self.letter_model.extract_features(input_img).view(-1, 11, 11,2304))
+        # feature_extracted_ = self.efficient_net.extract_features(input_img)
+        # letter_feature_extracted_ = self.letter_model.extract_features(input_img)
+        # feature_ = feature_extracted_ - letter_feature_extracted_
+        feature_ = self.test_bilinear(feature_extracted_, letter_feature_extracted_).view(-1, 256, 11, 11)
         output = self.last_dropout(self.adaptive_avgpool(self.batch_norm_2d(feature_)))
-        output = output.view(-1, 2304)
-        model_output = mish(self.last_linear(output))
+        output = output.view(-1, 256)
+        model_output = swish(self.test_last_linear(output))
         return model_output
 
 def swish(x): 

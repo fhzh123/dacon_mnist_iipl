@@ -43,14 +43,12 @@ def main(args):
             transforms.RandomResizedCrop((args.resize_pixel, args.resize_pixel), 
                                          scale=(0.85, 1)),
             transforms.ToTensor(),
-            # transforms.Normalize(mean=(0.1307,), std=(0.3081,))
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             transforms.RandomErasing(p=0.3, scale=(0.01, 0.05))
         ]),
         'valid': transforms.Compose([
             transforms.Resize((args.resize_pixel, args.resize_pixel)),
             transforms.ToTensor(),
-            # transforms.Normalize(mean=(0.1307,), std=(0.3081,))
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         ])
     }
