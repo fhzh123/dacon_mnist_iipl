@@ -26,71 +26,61 @@ class CNNClassifier(nn.Module):
 
     def __init__(self):
         super(CNNClassifier, self).__init__()
-        conv1=nn.Conv2d(3,6,5,1)
-        pool1=nn.MaxPool2d(2)
-        conv2=nn.Conv2d(6,16,5,1)
-        pool2=nn.MaxPool2d(2)
+        self.conv1=nn.Conv2d(3,6,5,1)
+        self.conv2=nn.Conv2d(6,10,5,1)
+        self.conv3=nn.Conv2d(10,16,3,1)
+        self.fc1=nn.Linear(16,10)
+
+        #conv1=nn.Conv2d(3,6,5,1)
+        #pool1=nn.MaxPool2d(2)
+        #conv2=nn.Conv2d(6,16,5,1)
+        #pool2=nn.MaxPool2d(2)
 
 
-        self.conv_module=nn.Sequential(conv1, nn.ReLU(), pool1, conv2, nn.ReLU(), pool2)
+        #self.conv_module=nn.Sequential(conv1, nn.ReLU(),  F.dropout2d(pool1),pool1,conv2, nn.ReLU(), pool2, F.dropout2d(pool2))
 
-        fc1=nn.Linear(16*4*4, 120)
-        fc2=nn.Linear(120,84)
-        fc3=nn.Linear(84,10)
+        #fc1=nn.Linear(16*4*4, 120)
+        #fc2=nn.Linear(120,84)
+        #fc3=nn.Linear(84,10)
 
-        self.fc_module=nn.Sequential(fc1, nn.ReLU(), fc2, nn.ReLU(), fc3)
+        #self.fc_module=nn.Sequential(fc1, nn.ReLU(), fc2, nn.ReLU(), fc3)
 
     def forward(self,x):
-        out=self.conv_module(x)
-        dim=1
-        for d in out.size()[1:]:
-            dim=dim*d
-        out=out.view(-1,dim)
-        out=self.fc_module(out)
-        return F.softmax(out,dim=1)
+        x=F.relu(F.max_pool2d(self.conv1(x),2))
+        x=F.relu(F.max_pool2d(self.conv2(x),2))
+        x=F.relu(F.max_pool2d(self.conv3(x),2))
 
-    #def forward(self,x):
-    #    x=self.conv1(x)
-    #    x=F.relu(x)
-    #    x=F.max_pool2d(x,2)
-    #    x=self.conv2(x)
-    #    x=F.relu(x)
-    #    x=F.max_pool2d(x,2)
-    #    x=x.view(-1,16)
-    #    x=self.fc1(x)
-    #    output=F.log_softmax(x)
-    #    return output
+        x=x.view(-1,16)
+        x=self.fc1(x)
+        return F.log_softmax(x,dim=1)
+
+
+
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (img, digit, letter) in enumerate(train_loader):
-        
-        #if torch.cuda.is_available:
-            #img=img.cuda()
-            #digit=digit.cuda()
-
         optimizer.zero_grad()
         output=model(img)
-        loss=F.nll_loss(output, digit)
+        train_loss=F.nll_loss(output, digit,reduction='sum').item()
+        loss=F.nll_loss(output, digit,reduction='sum')
         loss.backward()
         optimizer.step()
+    print('\nTrain Epoch: {}, Loss: {:.6f}\n'.format(epoch, train_loss/len(train_loader)))
 
-    if batch_idx % args.batch_size==0:
-        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format( epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))
-
+#print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format( epoch, batch_idx * len(img), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))         
+#print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct, len(test_loader.dataset),100. * correct / len(test_loader.dataset)))
+    
 def test(model, device, test_loader):
     model.eval()
     test_loss=0
     correct=0
     with torch.no_grad():
-        for img, digit in test_loader:
-            if torch.cuda.is_available:
-                img=img.cuda()
-                digit=digit.cuda() 
+        for (img, digit,letter) in test_loader:
             output=model(img)
             test_loss+=F.nll_loss(output, digit, reduction='sum').item() #sum up batch loss
             pred=output.argmax(dim=1, keepdim=True) # get the index of the max log-probability 
-            correct+=pred.eq(target.view_as(pred)).sum().item()
+            correct+=pred.eq(digit.view_as(pred)).sum().item()
 
     test_loss/=len(test_loader.dataset)
 
@@ -139,7 +129,9 @@ def main(args):
     #scheduler=StepLR(optimizer, step_size=1, gamma=args.gamma)
     for epoch in range(1, args.num_epochs+1):
         train(args,model,device,train_dataloader, optimizer, epoch)
-        test(model, device, validation_dataloader)
+    
+    
+    test(model, device, validation_dataloader)
         #scheduler.step()
 
     #if args.save_model:
@@ -170,7 +162,7 @@ if __name__=="__main__":
     #parser.add_argument("--efficientnet_model_number", type=str, default=7, help='Efficient model number ')
 
     #Training Setting
-    parser.add_argument('--num_epochs', type=int, default=200, help='The number of epoch')
+    parser.add_argument('--num_epochs', type=int, default=30, help='The number of epoch')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     #parser.add_argument('--lr', type=float, default=le-2, help='Learning rate setting')
     #parser.add_argument('--lr_step_size', type=int, default=60, help='Learning rate scheduling step')
