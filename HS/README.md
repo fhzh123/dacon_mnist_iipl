@@ -12,10 +12,12 @@ For dealing with letter column in train and test file, the one-hot encoding is u
 Therefore, one-hot for letter and image was put as input of the model.
 
 ## Result
-
-
+  - 2020.09.07 score: 0.81372, rank: 215
 
 ## Reference
   - ["Knowledge Distillation: A Survey(Gou et al, 2020)"](https://arxiv.org/abs/2006.05525)
   - ["Revisit Knowledge Distillation: a Teacher-free Framework(Li et al, 2020)"](https://arxiv.org/abs/2006.05525)
   - ["Github - peterliht/knowledge-distillation-pytorch"](https://github.com/peterliht/knowledge-distillation-pytorch)
+
+## updates
+  - 
