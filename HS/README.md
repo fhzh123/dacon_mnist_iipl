@@ -4,7 +4,7 @@ This is the code for attending ['DACON Computer Vision Competition'](https://dac
 
 ## 1. Structure
 ![](/figure/model.jpg)
-(Li et al, 2020)
+(Gou et al, 2020)
 
 In this code, Resnet50 and MobilenetV2 is used as teacher network and student network, respectively.
 
