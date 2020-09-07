@@ -19,7 +19,7 @@ parser.add_argument('--epoch', type=int, default=100)
 parser.add_argument('--step_size', type=int, default=30)
 parser.add_argument('--gamma', type=float, default=0.1)
 parser.add_argument('--lr', type=float, default=0.001)
-parser.add_argument('--resize_pixel', type=int, default=360, help='Resize pixel')
+parser.add_argument('--resize_pixel', type=int, default=100, help='Resize pixel')
 parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')
 args = parser.parse_args()
 
