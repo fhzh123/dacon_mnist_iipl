@@ -7,12 +7,10 @@ This is the code for attending [DACON Computer Vision Competition](https://dacon
 First, you need to install libraries to set environment with this code:
 
     pip install -r requirements.txt
-.
 
 Then run main.py by this code to implement training:
 
     python3 main.py
-.
 
 In this code, there are several arguments to be put like
   - data_dir: directory where data is stored(default: ./data).
@@ -33,12 +31,12 @@ For dealing with letter column in train and test file, the one-hot encoding is u
 Therefore, one-hot for letter and image was put as input of the model.
 
 ## Result
-- 2020.09.06  score: 0.81372,  rank: 215
+- **2020.09.06**  **score**: <u>0.81372</u>,  **rank**: <u>215</u>
 
 ## Reference
 - [Knowledge Distillation: A Survey(Gou et al, 2020)](https://arxiv.org/abs/2006.05525)
 - [Revisit Knowledge Distillation: a Teacher-free Framework(Li et al, 2020)](https://arxiv.org/abs/2006.05525)
 - [Github - peterliht/knowledge-distillation-pytorch](https://github.com/peterliht/knowledge-distillation-pytorch)
 
-## updates
+## Major updates
 - 
