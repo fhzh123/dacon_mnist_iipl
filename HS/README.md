@@ -43,4 +43,5 @@ score: <u>0.81372</u>,  rank: <u>215</u>(public)
   - [Github - peterliht/knowledge-distillation-pytorch](https://github.com/peterliht/knowledge-distillation-pytorch)
 
 ## Major Updates
-  - Largely modify image transformer: adding some components for train image transformer, changing means and standard deviations, etc.
+  - **2020.09.07**
+  Largely modify image transformer: adding some components for train image transformer, changing means and standard deviations, etc.
