@@ -8,7 +8,7 @@ from dataset import CustomDataset, preprocess
 from train_teacher import train_teacher
 from train_distiller import train_distiller
 from model import Teacher, Student
-from utils import test_model
+from submission import submission
 
 parser = argparse.ArgumentParser(description='Order_net argparser')
 parser.add_argument('--data_dir', type=str, default='./data')
@@ -68,9 +68,5 @@ distiller = train_distiller(epochs = args.epoch,
                             gamma = args.gamma,
                             lr= args.lr)
 
-y_pred = test_model(model = distiller,
-                   iter = iter)
-submission = pd.read_csv(args.data_dir+'/submission.csv')
-submission['digit'] = y_pred
-submission.to_csv(args.submit_dir,
-                  index = False)
+submission = submission(model = distiller, iter = iter)
+submission.to_csv(args.submit_dir, index = False)
