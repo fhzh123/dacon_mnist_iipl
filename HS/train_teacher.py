@@ -14,7 +14,7 @@ def train(model, iter, step_size, gamma, lr):
     
     for image, letter, label in iter['train']:
         image = image.to(device)
-        letter = torch.tensor(letter).to(device)
+        letter = letter.clone().detach().to(device)
         label = torch.tensor([int(x) for x in label]).to(device)
         
         optimizer.zero_grad()
@@ -34,7 +34,7 @@ def train_evaluate(model, iter, data):
     
     for image, letter, label in iter['train']:
         image = image.to(device)
-        letter = torch.tensor(letter).to(device)
+        letter = letter.clone().detach().to(device)
         label = torch.tensor([int(x) for x in label]).to(device)
         
         output = model(image, letter)
@@ -58,7 +58,7 @@ def eval(model, iter, data):
     
     for image, letter, label in iter['val']:
         image = image.to(device)
-        letter = torch.tensor(letter).to(device)
+        letter = letter.clone().detach().to(device)
         label = torch.tensor([int(x) for x in label]).to(device)
         
         output = model(image, letter)
@@ -74,7 +74,7 @@ def eval(model, iter, data):
 
 
 def train_teacher(epochs, model, iter, data, step_size, gamma, lr):
-    print('-----Training Teacher-----')
+    print('------Training Teacher------')
     for epoch in range(epochs):
         print(f'Epoch: {epoch+1} / {epochs}')
         train(model, iter, step_size, gamma, lr)

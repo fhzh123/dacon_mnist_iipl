@@ -19,54 +19,65 @@ parser.add_argument('--epoch', type=int, default=100)
 parser.add_argument('--step_size', type=int, default=30)
 parser.add_argument('--gamma', type=float, default=0.1)
 parser.add_argument('--lr', type=float, default=0.001)
+parser.add_argument('--resize_pixel', type=int, default=360, help='Resize pixel')
+parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')
 args = parser.parse_args()
 
-transform = transforms.Compose([
-                    transforms.Resize((70,70)),
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.5],[0.5])
-                    ])
+transform = {'train': transforms.Compose([transforms.Resize((args.resize_pixel, args.resize_pixel)),
+                                          transforms.RandomAffine(args.random_affine),
+                                          transforms.ColorJitter(brightness=(0.5, 2)),
+                                          transforms.RandomResizedCrop((args.resize_pixel, args.resize_pixel),scale=(0.85, 1)),
+                                          transforms.ToTensor(),
+                                          transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                                          transforms.RandomErasing(p=0.3, scale=(0.01, 0.05))]),
+             'val': transforms.Compose([transforms.Resize((args.resize_pixel, args.resize_pixel)),
+                                          transforms.ToTensor(),
+                                          transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))]),
+             'test': transforms.Compose([transforms.Resize((args.resize_pixel, args.resize_pixel)),
+                                         transforms.ToTensor(),
+                                         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])}
 
 preprocess = preprocess(train_dir=args.data_dir+'/train.csv',
                        test_dir=args.data_dir+'/test.csv',
-                       split = args.split_ratio)
+                       split=args.split_ratio)
     
 data = {'train': CustomDataset(preprocess['train'],
                                isTrain=True,
-                               transform=transform),
+                               transform=transform['train']),
         'val': CustomDataset(preprocess['val'],
                              isTrain=True,
-                             transform=transform),
+                             transform=transform['val']),
         'test': CustomDataset(preprocess['test'],
                               isTrain=False,
-                              transform=transform)}
+                              transform=transform['test'])}
     
 iter = {'train': DataLoader(data['train'],
-                            batch_size = args.batch,
-                            shuffle = True),
+                            batch_size=args.batch,
+                            shuffle=True),
         'val': DataLoader(data['val'],
-                          batch_size = args.batch,
-                          shuffle = True),
+                          batch_size=args.batch,
+                          shuffle=True),
         'test': DataLoader(data['test'],
-                           batch_size = 1,
-                           shuffle = False)}
+                           batch_size=1,
+                           shuffle=False)}
 
-teacher = train_teacher(epochs = args.epoch,
-                        model = Teacher(),
-                        iter = iter,
-                        data = data,
-                        step_size = args.step_size,
-                        gamma = args.gamma,
-                        lr = args.lr)
+teacher = train_teacher(epochs=args.epoch,
+                        model=Teacher(),
+                        iter=iter,
+                        data=data,
+                        step_size=args.step_size,
+                        gamma=args.gamma,
+                        lr=args.lr)
 
-distiller = train_distiller(epochs = args.epoch,
-                            model = Student(),
-                            iter = iter,
-                            data = data,
-                            teacher = teacher,
-                            step_size = args.step_size,
-                            gamma = args.gamma,
-                            lr= args.lr)
+distiller = train_distiller(epochs=args.epoch,
+                            model=Student(),
+                            iter=iter,
+                            data=data,
+                            teacher=teacher,
+                            step_size=args.step_size,
+                            gamma=args.gamma,
+                            lr=args.lr)
 
-submission = submission(model = distiller, iter = iter)
-submission.to_csv(args.submit_dir, index = False)
+submission = submission(model=distiller, iter=iter)
+submission.to_csv(args.submit_dir, index=False)
+print('------Job Finished!------')
