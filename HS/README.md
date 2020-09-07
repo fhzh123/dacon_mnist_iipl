@@ -4,10 +4,15 @@ This is the code for attending [DACON Computer Vision Competition](https://dacon
 
 ## How to execute?
 
-Just run main.py by this code:
+First, you need to install libraries to set environment with this code:
+
+    pip install -r requirements.txt
+.
+
+Then run main.py by this code to implement training:
 
     python3 main.py
-
+.
 
 In this code, there are several arguments to be put like
   - data_dir: directory where data is stored(default: ./data).
