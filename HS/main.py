@@ -8,7 +8,7 @@ from dataset import CustomDataset, preprocess
 from train_teacher import train_teacher
 from train_distiller import train_distiller
 from model import Teacher, Student
-from submission import submission
+from utils import submission
 
 parser = argparse.ArgumentParser(description='Order_net argparser')
 parser.add_argument('--data_dir', type=str, default='./data')
