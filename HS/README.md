@@ -1,6 +1,6 @@
 # DACON Competition with Knowledge Distillation
 
-This is the code for attending ['DACON Computer Vision Competition'](https://dacon.io/competitions/official/235626/overview/).
+This is the code for attending [DACON Computer Vision Competition](https://dacon.io/competitions/official/235626/overview/).
 
 ## How to execute?
 
