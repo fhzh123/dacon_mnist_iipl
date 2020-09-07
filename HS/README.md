@@ -21,6 +21,8 @@ In this code, there are several arguments to be put like
   - **gamma**: while updating learning rate, gamma is multiplied to the existing learning rate(defalut: 0.1).
   - **lr**: the learning rate(default: 0.001).
   - **submit_dir**: directory where submission file is stored(default: './submission.csv').
+  - **resize_pixel**: resize pixel for image(default=100).
+  - **random_affine**: randomly rotate images in the angle set by this argument(default=10).
 
 ## Model Architecture
 ![model](https://user-images.githubusercontent.com/51365760/92325154-3fccf480-f083-11ea-82ab-8304af084212.JPG)
@@ -40,5 +42,5 @@ score: <u>0.81372</u>,  rank: <u>215</u>(public)
   - [Revisit Knowledge Distillation: a Teacher-free Framework(Li et al, 2020)](https://arxiv.org/abs/1909.11723)
   - [Github - peterliht/knowledge-distillation-pytorch](https://github.com/peterliht/knowledge-distillation-pytorch)
 
-## updates
+## Major Updates
   - 
