@@ -15,7 +15,7 @@ In this code, there are several arguments to be put like
   - batch: the batch size(defalut: 64).
   - epoch: the time model trains data(default: 100).
   - step_size: the time how often learning rate scheduler updates the learning rate(default: 30).
-  - gammma: while updating learning rate, gamma is multiplied to the existing learning rate(defalut: 0.1).
+  - gamma: while updating learning rate, gamma is multiplied to the existing learning rate(defalut: 0.1).
   - lr: the learning rate(default: 0.001).
 
 ## Model Architecture
