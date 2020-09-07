@@ -6,9 +6,8 @@ This is the code for attending ['DACON Computer Vision Competition'](https://dac
 
 Just run main.py by this code:
 
-'''
-python3 main.py
-'''
+    python3 main.py
+
 
 In this code, there are several arguments to be put like
   - data_dir: directory where data is stored(default: ./data).
