@@ -51,7 +51,7 @@ def train_evaluate(model, iter, data):
 def eval(model, iter, data):
     device = torch.device('cuda:0')
     model.to(device)
-    model.train()
+    model.eval()
     
     loss = 0.0
     correct = 0.0
