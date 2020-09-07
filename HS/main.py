@@ -78,6 +78,8 @@ distiller = train_distiller(epochs=args.epoch,
                             gamma=args.gamma,
                             lr=args.lr)
 
-submission = submission(model=distiller, iter=iter)
+y_preds = submission(model=distiller, iter=iter)
+submission = pd.read_csv(args.data_dir+'/submission.csv')
+submission['digit'] = y_preds
 submission.to_csv(args.submit_dir, index=False)
 print('------Job Finished!------')
