@@ -12,6 +12,7 @@ from utils import test_model
 
 parser = argparse.ArgumentParser(description='Order_net argparser')
 parser.add_argument('--data_dir', type=str, default='./data')
+parser.add_argument('--submit_dir', type=str, default='./submission.csv')
 parser.add_argument('--split_ratio', type=float, default=.1, help='train-val data ratio')
 parser.add_argument('--batch', type=int, default=64)
 parser.add_argument('--epoch', type=int, default=100)
@@ -71,5 +72,5 @@ y_pred = test_model(model = distiller,
                    iter = iter)
 submission = pd.read_csv(args.data_dir+'/submission.csv')
 submission['digit'] = y_pred
-submission.to_csv('./submission.csv',
+submission.to_csv(args.submit_dir,
                   index = False)
