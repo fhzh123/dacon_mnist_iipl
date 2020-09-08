@@ -28,7 +28,7 @@ In this code, there are several arguments to be put like
 ![model](https://user-images.githubusercontent.com/51365760/92325154-3fccf480-f083-11ea-82ab-8304af084212.JPG)
 (Gou et al, 2020)
 
-In this code, Resnet50 and MobilenetV2 is used as teacher network and student network, respectively.
+In this code, Resnet50 and MobilenetV2 is used as teacher network and student network, respectively(the code is imported from [torchvision](https://pytorch.org/docs/stable/torchvision/models.html)).
 
 For dealing with letter column in train and test file, the one-hot encoding is used(in python code, pandas.get_dummies()).
 Therefore, one-hot for letter and image was put as input of the model.
