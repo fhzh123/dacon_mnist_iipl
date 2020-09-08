@@ -48,4 +48,4 @@ score: 0.90686,  rank: 91(public)
 - **2020.09.07**  
 Largely modify image transformer: adding some components for train image transformer, changing means and standard deviations, etc.
 - **2020.09.08**  
-Change train network into Efficientnet-b4.
+Change teacher network into Efficientnet-b4.
