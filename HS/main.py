@@ -4,29 +4,31 @@ import pandas as pd
 from torchvision import transforms
 from torch.utils.data import DataLoader
 
-from dataset import CustomDataset, preprocess
+from dataset import CustomDataset, preprocess, transform
 from train_teacher import train_teacher
 from train_distiller import train_distiller
 from model import Teacher, Student
 from utils import submission
 
-transform = {'train': transforms.Compose([transforms.Resize((args.resize_pixel, args.resize_pixel)),
-                                          transforms.RandomAffine(args.random_affine),
-                                          transforms.ColorJitter(brightness=(0.5, 2)),
-                                          transforms.RandomResizedCrop((args.resize_pixel, args.resize_pixel),scale=(0.85, 1)),
-                                          transforms.ToTensor(),
-                                          transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-                                          transforms.RandomErasing(p=0.3, scale=(0.01, 0.05))]),
-             'val': transforms.Compose([transforms.Resize((args.resize_pixel, args.resize_pixel)),
-                                          transforms.ToTensor(),
-                                          transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))]),
-             'test': transforms.Compose([transforms.Resize((args.resize_pixel, args.resize_pixel)),
-                                         transforms.ToTensor(),
-                                         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])}
+parser = argparse.ArgumentParser(description='Order_net argparser')
+parser.add_argument('--data_dir', type=str, default='./data')
+parser.add_argument('--submit_dir', type=str, default='./submission.csv')
+parser.add_argument('--split_ratio', type=float, default=.1, help='train-val data ratio')
+parser.add_argument('--batch', type=int, default=64)
+parser.add_argument('--epoch', type=int, default=100)
+parser.add_argument('--step_size', type=int, default=30)
+parser.add_argument('--gamma', type=float, default=0.1)
+parser.add_argument('--lr', type=float, default=0.001)
+parser.add_argument('--resize_pixel', type=int, default=100, help='Resize pixel')
+parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')
+args = parser.parse_args()
 
 preprocess = preprocess(train_dir=args.data_dir+'/train.csv',
                        test_dir=args.data_dir+'/test.csv',
                        split=args.split_ratio)
+
+transform = transform(pixel=args.resize_pixel,
+                      affine=args.random_affine)
     
 data = {'train': CustomDataset(preprocess['train'],
                                isTrain=True,
@@ -70,16 +72,3 @@ submission = pd.read_csv(args.data_dir+'/submission.csv')
 submission['digit'] = y_preds
 submission.to_csv(args.submit_dir, index=False)
 print('------Job Finished!------')
-
-parser = argparse.ArgumentParser(description='Order_net argparser')
-parser.add_argument('--data_dir', type=str, default='./data')
-parser.add_argument('--submit_dir', type=str, default='./submission.csv')
-parser.add_argument('--split_ratio', type=float, default=.1, help='train-val data ratio')
-parser.add_argument('--batch', type=int, default=64)
-parser.add_argument('--epoch', type=int, default=100)
-parser.add_argument('--step_size', type=int, default=30)
-parser.add_argument('--gamma', type=float, default=0.1)
-parser.add_argument('--lr', type=float, default=0.001)
-parser.add_argument('--resize_pixel', type=int, default=100, help='Resize pixel')
-parser.add_argument('--random_affine', type=int, default=10, help='Random affine transformation ratio')
-args = parser.parse_args()

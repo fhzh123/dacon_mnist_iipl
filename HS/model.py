@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
 from torchvision import models
+from efficientnet_pytorch import EfficientNet
 
 class Teacher(nn.Module):
     def __init__(self):
         super(Teacher,self).__init__()
-        self.model = models.resnet50(pretrained=False)
+        self.model = EfficientNet.from_name('efficientnet-b4')
         self.fc1 = nn.Linear(1000+26,100)
         self.fc2 = nn.Linear(100,10)
 

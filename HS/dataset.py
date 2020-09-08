@@ -52,3 +52,19 @@ def preprocess(train_dir, test_dir, split):
                  'val': val,
                  'test': test}
     return preprocess
+
+def transform(pixel, affine):
+    transform = {'train': transforms.Compose([transforms.Resize((pixel, pixel)),
+                                              transforms.RandomAffine(affine),
+                                              transforms.ColorJitter(brightness=(0.5, 2)),
+                                              transforms.RandomResizedCrop((pixel,pixel),scale=(0.85, 1)),
+                                              transforms.ToTensor(),
+                                              transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                                              transforms.RandomErasing(p=0.3, scale=(0.01, 0.05))]),
+                 'val': transforms.Compose([transforms.Resize((pixel,pixel)),
+                                            transforms.ToTensor(),
+                                            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))]),
+                 'test': transforms.Compose([transforms.Resize((pixel,pixel)),
+                                             transforms.ToTensor(),
+                                             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])}
+    return transform
