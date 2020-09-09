@@ -38,6 +38,8 @@ Therefore, one-hot for letter and image was put as input of the model.
 score: 0.81372,  rank: 215(public)
 - **2020.09.08**  
 score: 0.90686,  rank: 91(public)
+condition: teacher-resnet50, student-mobilenetV2
+           epochs-200, resize_pixel=200
 
 ## Reference
   - [Knowledge Distillation: A Survey(Gou et al, 2020)](https://arxiv.org/abs/2006.05525)
