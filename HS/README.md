@@ -42,7 +42,7 @@ condition: teacher-resnet50, student-mobilenetV2, epochs-200, resize_pixel=200
 
 ## Reference
   - [Knowledge Distillation: A Survey(Gou et al, 2020)](https://arxiv.org/abs/2006.05525)
-  - [Revisit Knowledge Distillation: a Teacher-free Framework(Li et al, 2020)](https://arxiv.org/abs/1909.11723)
+  - [Revisit Knowledge Distillation: a Teacher-free Framework(Yuan et al, 2020)](https://arxiv.org/abs/1909.11723)
   - [Github - peterliht/knowledge-distillation-pytorch](https://github.com/peterliht/knowledge-distillation-pytorch)
 
 ## Major Updates
