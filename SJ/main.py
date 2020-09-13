@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 
 
-class CNNClassifier(nn.Module):
+#class CNNClassifier(nn.Module):
 
     #def __init__(self):
     #    super(CNNClassifier,self).__init__()
@@ -24,61 +24,62 @@ class CNNClassifier(nn.Module):
     #    self.conv2=nn.Conv2d(6,16,kernel_size=5)
     #    self.fc1=nn.Linear(16,10)
 
-    def __init__(self):
-        super(CNNClassifier, self).__init__()
-        self.conv1=nn.Conv2d(3,6,5,1)
-        self.conv2=nn.Conv2d(6,10,5,1)
-        self.conv3=nn.Conv2d(10,16,3,1)
-        self.fc1=nn.Linear(16,10)
+    #def __init__(self):
+    #    super(CNNClassifier, self).__init__()
+    #    self.conv1=nn.Conv2d(3,6,5,1)
+    #    self.conv2=nn.Conv2d(6,10,5,1)
+    #    self.conv3=nn.Conv2d(10,16,3,1)
+    #    self.fc1=nn.Linear(16,10)
+    #    self.drop_out=nn.Dropout(p=0.1)
+      
 
-        #conv1=nn.Conv2d(3,6,5,1)
-        #pool1=nn.MaxPool2d(2)
-        #conv2=nn.Conv2d(6,16,5,1)
-        #pool2=nn.MaxPool2d(2)
+    #def forward(self,x):
+    #    x=F.relu(F.max_pool2d(self.conv1(x),2)) 
+        #x=self.drop_out(x)
+    #    x=F.relu(F.max_pool2d(self.conv2(x),2))
+        #x=self.drop_out(x)
+    #    x=F.relu(F.max_pool2d(self.conv3(x),2))
+    #    x=self.drop_out(x)
 
-
-        #self.conv_module=nn.Sequential(conv1, nn.ReLU(),  F.dropout2d(pool1),pool1,conv2, nn.ReLU(), pool2, F.dropout2d(pool2))
-
-        #fc1=nn.Linear(16*4*4, 120)
-        #fc2=nn.Linear(120,84)
-        #fc3=nn.Linear(84,10)
-
-        #self.fc_module=nn.Sequential(fc1, nn.ReLU(), fc2, nn.ReLU(), fc3)
-
-    def forward(self,x):
-        x=F.relu(F.max_pool2d(self.conv1(x),2))
-        x=F.relu(F.max_pool2d(self.conv2(x),2))
-        x=F.relu(F.max_pool2d(self.conv3(x),2))
-
-        x=x.view(-1,16)
-        x=self.fc1(x)
-        return F.log_softmax(x,dim=1)
+    #   x=x.view(-1,16)
+    #    x=self.fc1(x)
+    #   return F.log_softmax(x,dim=1)
 
 
 
 
-def train(args, model, device, train_loader, optimizer, epoch):
+def train(args, model, device, train_loader, optimizer, epoch, criterion):
     model.train()
+    train_loss_for_average=0
     for batch_idx, (img, digit, letter) in enumerate(train_loader):
+        
+        if torch.cuda.is_available():
+            img=img.cuda()
+            digit=digit.cuda()
         optimizer.zero_grad()
         output=model(img)
-        train_loss=F.nll_loss(output, digit,reduction='sum').item()
-        loss=F.nll_loss(output, digit,reduction='sum')
+        loss=criterion(output, digit)
         loss.backward()
         optimizer.step()
-    print('\nTrain Epoch: {}, Loss: {:.6f}\n'.format(epoch, train_loss/len(train_loader)))
+    
+    train_loss_for_average+=loss/len(train_loader)
+    print('\nTrain Epoch: {}, Loss: {:.6f}\n'.format(epoch, train_loss_for_average ))
+    return train_loss_for_average
 
 #print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format( epoch, batch_idx * len(img), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))         
 #print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct, len(test_loader.dataset),100. * correct / len(test_loader.dataset)))
     
-def test(model, device, test_loader):
+def test(model, device, test_loader, criterion):
     model.eval()
     test_loss=0
     correct=0
     with torch.no_grad():
         for (img, digit,letter) in test_loader:
+            if torch.cuda.is_available():
+                img=img.cuda()
+                digit=digit.cuda()
             output=model(img)
-            test_loss+=F.nll_loss(output, digit, reduction='sum').item() #sum up batch loss
+            test_loss+=criterion(output, digit) #sum up batch loss
             pred=output.argmax(dim=1, keepdim=True) # get the index of the max log-probability 
             correct+=pred.eq(digit.view_as(pred)).sum().item()
 
@@ -113,6 +114,8 @@ def main(args):
 
     }
 
+    criterion=nn.CrossEntropyLoss()
+
     train_data_list, validation_data_list=split_dataset_function(args.train_data_name)
 
     train_dataset=CustomDataset(train_data_list,args.data_path+'/train',data_transforms['train'])
@@ -123,15 +126,19 @@ def main(args):
     train_dataloader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     validation_dataloader=DataLoader(validation_dataset, batch_size=args.batch_size, shuffle=True)
     
-    model=CNNClassifier()
+    model=models.mobilenet_v2(pretrained=False,num_classes=10).cuda()
+
     optimizer=optim.Adam(model.parameters() )
-    
-    #scheduler=StepLR(optimizer, step_size=1, gamma=args.gamma)
+    total_train_loss=0
+    scheduler=optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.99)
     for epoch in range(1, args.num_epochs+1):
-        train(args,model,device,train_dataloader, optimizer, epoch)
+        scheduler.step()
+        total_train_loss+=train(args,model,device,train_dataloader, optimizer, epoch, criterion)
+       
     
+    print('\n Average Train Loss: {:.6f}\n'.format(total_train_loss/args.num_epochs))
     
-    test(model, device, validation_dataloader)
+    test(model, device, validation_dataloader,criterion)
         #scheduler.step()
 
     #if args.save_model:
@@ -162,7 +169,7 @@ if __name__=="__main__":
     #parser.add_argument("--efficientnet_model_number", type=str, default=7, help='Efficient model number ')
 
     #Training Setting
-    parser.add_argument('--num_epochs', type=int, default=30, help='The number of epoch')
+    parser.add_argument('--num_epochs', type=int, default=100, help='The number of epoch')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     #parser.add_argument('--lr', type=float, default=le-2, help='Learning rate setting')
     #parser.add_argument('--lr_step_size', type=int, default=60, help='Learning rate scheduling step')
