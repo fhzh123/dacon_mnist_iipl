@@ -2,7 +2,7 @@ import torch
 import torch.optim as optim
 from torch.optim import lr_scheduler
 
-from loss import loss_ce
+from utils import loss_ce
 
 def train(model, iter, step_size, gamma, lr):
     device = torch.device('cuda:0')
@@ -10,7 +10,10 @@ def train(model, iter, step_size, gamma, lr):
     model.train()
     
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
+    #scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,
+                                               factor=gamma,
+                                               patience=step_size)
     
     for image, letter, label in iter['train']:
         image = image.to(device)
@@ -22,7 +25,7 @@ def train(model, iter, step_size, gamma, lr):
         loss = loss_ce(output, label)
         loss.backward()
         optimizer.step()
-        scheduler.step()
+        scheduler.step(loss)
             
 def train_evaluate(model, iter, data):
     device = torch.device('cuda:0')

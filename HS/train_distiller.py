@@ -2,9 +2,9 @@ import torch
 import torch.optim as optim
 from torch.optim import lr_scheduler
 
-from loss import loss_ce, loss_kd
+from utils import loss_ce, loss_kd
 
-def train(model, iter, step_size, gamma, lr, teacher):
+def train(model, iter, step_size, gamma, lr, T, alpha, teacher):
     device = torch.device('cuda:0')
     model.to(device)
     model.train()
@@ -12,7 +12,10 @@ def train(model, iter, step_size, gamma, lr, teacher):
     teacher.eval()
     
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
+    #scheduler = lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,
+                                               factor=gamma,
+                                               patience=step_size)
     
     for image, letter, label in iter['train']:
         image = image.to(device)
@@ -23,10 +26,14 @@ def train(model, iter, step_size, gamma, lr, teacher):
         output = model(image, letter)
         t_output = teacher(image, letter)
         t_output = t_output.detach()
-        loss = loss_kd(t_output=t_output, s_output=output, label=label, T=10.0, alpha=0.5)
+        loss = loss_kd(t_output=t_output, 
+                       s_output=output, 
+                       label=label, 
+                       T=T, 
+                       alpha=alpha)
         loss.backward()
         optimizer.step()
-        scheduler.step()
+        scheduler.step(loss)
             
 def train_evaluate(model, iter, data):
     device = torch.device('cuda:0')
@@ -77,11 +84,13 @@ def eval(model, iter, data):
     print(f'Val loss: {loss:.4f}, Accuracy: {acc:.2f}%')
 
 
-def train_distiller(epochs, model, iter, data, step_size, gamma, lr, teacher):
+def train_distiller(epochs, model, iter, data, step_size, 
+                    gamma, lr, T, alpha, teacher):
     print('------Training Distiller------')
     for epoch in range(epochs):
         print(f'Epoch: {epoch+1} / {epochs}')
-        train(model, iter, step_size, gamma, lr, teacher)
+        train(model, iter, step_size, gamma, 
+              lr, T, alpha, teacher)
         train_evaluate(model, iter, data)
         eval(model, iter, data)
     return model

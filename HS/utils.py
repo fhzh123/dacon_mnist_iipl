@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import pandas as pd
 import torch.nn.functional as F
+from tqdm import tqdm
 
 def loss_ce(output, label):
     loss = F.cross_entropy(output, label)
@@ -21,7 +22,7 @@ def submission(model, iter):
     device = torch.device('cuda:0')
     model.to(device)
     print('------Making submission file------')
-    for image, letter, id in iter['test']:
+    for image, letter, id in tqdm(iter['test']):
         image = image.to(device)
         letter = letter.clone().detach().to(device)
         with torch.no_grad():
