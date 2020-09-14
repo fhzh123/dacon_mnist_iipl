@@ -35,7 +35,7 @@ def img_save(dataset,isTrain=True): #main 함수에서 불러온 csv dataset을 
             wr.writerow([i,f'{id_}_{letter_}.jpg',digit_,letter_])
         else:
             img.save(os.path.join(f'./data/test/',f'{id_}_{letter_}.jpg'))
-            wr.writerow([i,f'{id_}_{letter_}.jpg','',letter_])
+            wr.writerow([i,f'{id_}_{letter_}.jpg',0,letter_])
 
 
 def main(args):

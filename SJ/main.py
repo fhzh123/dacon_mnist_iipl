@@ -14,6 +14,7 @@ from torchvision import transforms, models
 from skimage import io
 from torch.utils.data import DataLoader
 import torch.optim as optim
+import matplotlib.pyplot as plt
 
 
 #class CNNClassifier(nn.Module):
@@ -48,6 +49,9 @@ import torch.optim as optim
 train_Accuracy_array=[]
 test_Accuracy_array=[]
 
+train_Loss_array=[]
+test_Loss_array=[]
+
 
 
 
@@ -55,11 +59,16 @@ def train(args, model, device, train_loader, optimizer, epoch, criterion):
     model.train()
     train_loss_for_average=0
     correct=0.0
+    reg=0
+    reg_lambda=0.01
+    l2_regularization=0
+   
     for batch_idx, (img, digit, letter) in enumerate(train_loader):
-        
+
         if torch.cuda.is_available():
             img=img.cuda()
             digit=digit.cuda()
+            letter=letter.cuda()
         optimizer.zero_grad()
         output=model(img)
         loss=criterion(output, digit)
@@ -71,6 +80,9 @@ def train(args, model, device, train_loader, optimizer, epoch, criterion):
     accuracy=100.*correct/len(train_loader.dataset)
     train_loss_for_average+=loss/len(train_loader)
     
+    
+    train_Accuracy_array.append(accuracy)
+    train_Loss_array.append(train_loss_for_average)
     print('\nTrain Epoch:{} , Accuracy: {:.0f}%\n'.format(epoch, accuracy))
     print('\nTrain Epoch: {}, Loss: {:.6f}\n'.format(epoch, train_loss_for_average ))
     return train_loss_for_average
@@ -87,14 +99,17 @@ def test(model, device, test_loader, criterion):
             if torch.cuda.is_available():
                 img=img.cuda()
                 digit=digit.cuda()
+                letter=letter.cuda()
             output=model(img)
-            test_loss+=criterion(output, digit) #sum up batch loss
+            test_loss=criterion(output, digit) #sum up batch loss
             pred=output.argmax(dim=1, keepdim=True) # get the index of the max log-probability 
             correct+=pred.eq(digit.view_as(pred)).sum().item()
 
-    test_loss/=len(test_loader.dataset)
+    accuracy=100.*correct/len(test_loader.dataset)
 
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct, len(test_loader.dataset),100. * correct / len(test_loader.dataset)))
+    test_Accuracy_array.append(accuracy)
+    test_Loss_array.append(test_loss)
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss/len(test_loader), correct, len(test_loader.dataset),accuracy))
 
 
 def main(args):
@@ -118,7 +133,11 @@ def main(args):
             transforms.ToTensor(),
             transforms.Normalize((0.485, 0.456, 0.406),(0.229, 0.224, 0.225))
 
-        ])
+        ]),
+        'test':transforms.Compose([
+            transforms.Resize((args.resize_pixel, args.resize_pixel)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406),(0.229, 0.224, 0.225)) ])
                  
 
     }
@@ -127,9 +146,9 @@ def main(args):
 
     train_data_list, validation_data_list=split_dataset_function(args.train_data_name)
 
-    train_dataset=CustomDataset(train_data_list,args.data_path+'/train',data_transforms['train'])
+    train_dataset=CustomDataset(train_data_list,args.data_path+'/train',data_transforms['train'], isTrain=True)
 
-    validation_dataset=CustomDataset(validation_data_list,args.data_path+'/train',data_transforms['valid'])
+    validation_dataset=CustomDataset(validation_data_list,args.data_path+'/train',data_transforms['valid'], isTrain=True)
 
     
     train_dataloader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
@@ -137,22 +156,31 @@ def main(args):
     
     model=models.mobilenet_v2(pretrained=False,num_classes=10).cuda()
 
-    optimizer=optim.Adam(model.parameters() )
+    optimizer=optim.Adam(model.parameters())
     total_train_loss=0
-    #scheduler=optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.99)
+    scheduler=optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.99)
     for epoch in range(1, args.num_epochs+1):
-        #scheduler.step()
+        scheduler.step()
         total_train_loss+=train(args,model,device,train_dataloader, optimizer, epoch, criterion)
         test(model, device, validation_dataloader,criterion)
     
     print('\n Average Train Loss: {:.6f}\n'.format(total_train_loss/args.num_epochs))
     
-    #test(model, device, validation_dataloader,criterion)
+ 
+    
+    torch.save(model.state_dict(),os.path.join(args.save_path,'model_file.pth'))
+    
+    plt.plot(range(1,len(train_Accuracy_array)+1),train_Accuracy_array, 'b',label='Training Accuracy')
+    plt.plot(range(1,len(test_Accuracy_array)+1),test_Accuracy_array, 'r',label='Test Accuracy')
+    plt.legend()
+    plt.show()
+
+
+
+    
+    #test(model, device, validation_d ataloader,criterion)
         #scheduler.step()
 
-    #if args.save_model:
-        #torch.save()
-    
 #train모드 
 
 
@@ -166,7 +194,7 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description='Order_net argparser')
     parser.add_argument('--train_data_name',type=str, default='train_dataset_list.csv', help='Data path setting')
     parser.add_argument('--data_path',type=str, default='./data', help='Data path setting')
-    parser.add_argument('--save_path',type=str, default='./save')
+    parser.add_argument('--save_path',type=str, default='./model')
     #parser.add_argument('--letter_model_path') #사용용도를 아직 잘 모르겠어서 우선 skip
     
     #Image Setting
@@ -178,7 +206,7 @@ if __name__=="__main__":
     #parser.add_argument("--efficientnet_model_number", type=str, default=7, help='Efficient model number ')
 
     #Training Setting
-    parser.add_argument('--num_epochs', type=int, default=300, help='The number of epoch')
+    parser.add_argument('--num_epochs', type=int, default=500, help='The number of epoch')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     #parser.add_argument('--lr', type=float, default=le-2, help='Learning rate setting')
     #parser.add_argument('--lr_step_size', type=int, default=60, help='Learning rate scheduling step')

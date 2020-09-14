@@ -7,13 +7,13 @@ import os
 
 class CustomDataset(Dataset):
     
-    def __init__(self, dataset_list, root_dir,transform=None):
+    def __init__(self, dataset_list, root_dir,transform=None, isTrain=True):
 
         self.original_csv=dataset_list
         self.root_dir=root_dir
         self.dataset_list=dataset_list
         self.transform=transform
-    
+        self.isTrain=isTrain
        
 
     def __getitem__(self, idx):
@@ -31,9 +31,21 @@ class CustomDataset(Dataset):
         digit= csv_content['digit']
 
         #letter
-        letter= csv_content['letter']
+        letter= ord(csv_content['letter'])
 
-        img_path=os.path.join(self.root_dir+'/'+str(digit)+'/', file_name )
+        #letter->array로 변환 (tuple로 저장되는 문제가 있음)
+
+
+        if self.isTrain:
+        
+            img_path=os.path.join(self.root_dir+'/'+str(digit)+'/', file_name )
+        
+        else:
+            
+
+            img_path=os.path.join(self.root_dir+'/', file_name )
+            
+
         
         image=Image.open(img_path)
 

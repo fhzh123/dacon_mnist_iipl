@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd 
+from torch import nn
 
 
 def split_dataset_function(target_csv):
