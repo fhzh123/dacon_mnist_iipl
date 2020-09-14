@@ -45,12 +45,16 @@ import torch.optim as optim
     #    x=self.fc1(x)
     #   return F.log_softmax(x,dim=1)
 
+train_Accuracy_array=[]
+test_Accuracy_array=[]
+
 
 
 
 def train(args, model, device, train_loader, optimizer, epoch, criterion):
     model.train()
     train_loss_for_average=0
+    correct=0.0
     for batch_idx, (img, digit, letter) in enumerate(train_loader):
         
         if torch.cuda.is_available():
@@ -61,8 +65,13 @@ def train(args, model, device, train_loader, optimizer, epoch, criterion):
         loss=criterion(output, digit)
         loss.backward()
         optimizer.step()
+        train_pred=output.argmax(dim=1,keepdim=True)
+        correct+=train_pred.eq(digit.view_as(train_pred)).sum().item()
     
+    accuracy=100.*correct/len(train_loader.dataset)
     train_loss_for_average+=loss/len(train_loader)
+    
+    print('\nTrain Epoch:{} , Accuracy: {:.0f}%\n'.format(epoch, accuracy))
     print('\nTrain Epoch: {}, Loss: {:.6f}\n'.format(epoch, train_loss_for_average ))
     return train_loss_for_average
 
@@ -130,15 +139,15 @@ def main(args):
 
     optimizer=optim.Adam(model.parameters() )
     total_train_loss=0
-    scheduler=optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.99)
+    #scheduler=optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.99)
     for epoch in range(1, args.num_epochs+1):
-        scheduler.step()
+        #scheduler.step()
         total_train_loss+=train(args,model,device,train_dataloader, optimizer, epoch, criterion)
-       
+        test(model, device, validation_dataloader,criterion)
     
     print('\n Average Train Loss: {:.6f}\n'.format(total_train_loss/args.num_epochs))
     
-    test(model, device, validation_dataloader,criterion)
+    #test(model, device, validation_dataloader,criterion)
         #scheduler.step()
 
     #if args.save_model:
@@ -169,7 +178,7 @@ if __name__=="__main__":
     #parser.add_argument("--efficientnet_model_number", type=str, default=7, help='Efficient model number ')
 
     #Training Setting
-    parser.add_argument('--num_epochs', type=int, default=100, help='The number of epoch')
+    parser.add_argument('--num_epochs', type=int, default=300, help='The number of epoch')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     #parser.add_argument('--lr', type=float, default=le-2, help='Learning rate setting')
     #parser.add_argument('--lr_step_size', type=int, default=60, help='Learning rate scheduling step')
